@@ -1,0 +1,56 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: aleathor
+Upstream-Contact: Giovanni MARIANO
+Source: https://github.com/giovanni-mariano/aleathor
+
+Files: .gitignore
+Copyright: 2026 Giovanni MARIANO
+License: MPL-2.0
+
+Files: .gitmodules
+Copyright: 2026 Giovanni MARIANO
+License: MPL-2.0
+
+Files: .python-version
+Copyright: 2026 Giovanni MARIANO
+License: MPL-2.0
+
+Files: pyproject.toml
+Copyright: 2026 Giovanni MARIANO
+License: MPL-2.0
+
+Files: README.md
+Copyright: 2026 Giovanni MARIANO
+License: MPL-2.0
+
+Files: python_api_design.md
+Copyright: 2026 Giovanni MARIANO
+License: MPL-2.0
+
+Files: examples/*.py
+Copyright: 2026 Giovanni MARIANO
+License: MPL-2.0
+
+Files: csrc/libalea
+Copyright: 2026 Giovanni MARIANO
+License: MPL-2.0
+
+Files: build/*
+Copyright: 2026 Giovanni MARIANO
+License: MPL-2.0
+
+Files: src/aleathor/__pycache__/*
+Copyright: 2026 Giovanni MARIANO
+License: MPL-2.0
+
+Files: src/aleathor.egg-info/*
+Copyright: 2026 Giovanni MARIANO
+License: MPL-2.0
+
+Files: src/*.so
+Copyright: 2026 Giovanni MARIANO
+License: MPL-2.0
+
+Files: assets/*
+Copyright: 2026 Giovanni MARIANO
+License: MPL-2.0

@@ -1,0 +1,34 @@
+[project]
+name = "aleathor"
+version = "0.1.0"
+description = "Constructive Solid Geometry library for nuclear simulations with MCNP export"
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = []
+
+[project.optional-dependencies]
+test = [
+    "pytest>=7.0",
+    "pytest-cov>=4.0",
+]
+plot = [
+    "matplotlib>=3.5",
+    "numpy>=1.20",
+]
+dev = [
+    "aleathor[test,plot]",
+]
+
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_functions = ["test_*"]
+addopts = "-v --tb=short"
+
+[tool.coverage.run]
+source = ["aleathor"]
+omit = ["*/tests/*"]

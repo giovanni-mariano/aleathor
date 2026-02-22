@@ -1,0 +1,3 @@
+[submodule "csrc/libalea"]
+	path = csrc/libalea
+	url = git@github.com:giovanni-mariano/libalea.c.git
