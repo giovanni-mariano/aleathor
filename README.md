@@ -76,6 +76,27 @@ pip install -e .
 - Make
 - Optional: matplotlib, numpy (for plotting)
 
+### Build options
+
+Two environment variables control the build. They work both from source and from PyPI (using `--no-binary` to force a source build instead of downloading a prebuilt wheel).
+
+| Variable | Default | Effect |
+|----------|---------|--------|
+| `PORTABLE` | `1` | When `0`, compiles with `-march=native` for maximum performance on your CPU. Do **not** distribute wheels built this way. |
+| `USE_OPENMP` | `0` | When `1`, enables OpenMP parallelism. Requires an OpenMP-capable compiler. |
+
+From source:
+
+```bash
+PORTABLE=0 USE_OPENMP=1 pip install -e .
+```
+
+From PyPI:
+
+```bash
+PORTABLE=0 USE_OPENMP=1 pip install --no-binary aleathor aleathor
+```
+
 ## Quick Start
 
 ### Loading and Debugging an MCNP Model

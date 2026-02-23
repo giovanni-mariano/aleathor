@@ -1,0 +1,6 @@
+recursive-include csrc/libalea/src *.c *.h
+recursive-include csrc/libalea/include *.h
+include csrc/libalea/Makefile
+recursive-include src/aleathor/_binding *.c
+include LICENSES/*
+include REUSE.toml

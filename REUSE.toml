@@ -10,7 +10,9 @@ path = [
     ".gitmodules",
     ".python-version",
     "pyproject.toml",
+    "MANIFEST.in",
     "README.md",
+    ".github/workflows/*.yml",
     "python_api_design.md",
     "assets/*",
 ]
