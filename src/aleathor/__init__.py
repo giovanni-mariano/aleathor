@@ -85,8 +85,6 @@ from .collections import (
     TraceSegment,
 )
 
-from . import slicing
-
 # Design document API aliases
 load_mcnp = read_mcnp
 load_openmc = read_openmc
@@ -256,6 +254,4 @@ __all__ = [
     'GRID_ERROR_OK',
     'GRID_ERROR_OVERLAP',
     'GRID_ERROR_UNDEFINED',
-    # Operation modules
-    'slicing',
 ]

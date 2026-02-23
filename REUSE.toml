@@ -1,0 +1,54 @@
+# SPDX-FileCopyrightText: 2026 Giovanni MARIANO
+#
+# SPDX-License-Identifier: MPL-2.0
+
+version = 1
+
+[[annotations]]
+path = [
+    ".gitignore",
+    ".gitmodules",
+    ".python-version",
+    "pyproject.toml",
+    "README.md",
+    "python_api_design.md",
+    "assets/*",
+]
+SPDX-FileCopyrightText = "2026 Giovanni MARIANO"
+SPDX-License-Identifier = "MPL-2.0"
+
+[[annotations]]
+path = [
+    "examples/*.py",
+    "examples/*.ipynb",
+]
+SPDX-FileCopyrightText = "2026 Giovanni MARIANO"
+SPDX-License-Identifier = "MPL-2.0"
+
+[[annotations]]
+path = [
+    "tests/data/*",
+]
+SPDX-FileCopyrightText = "2026 Giovanni MARIANO"
+SPDX-License-Identifier = "MPL-2.0"
+
+[[annotations]]
+path = [
+    "src/aleathor/py.typed",
+    "src/aleathor.egg-info/*",
+    "src/*.so",
+]
+SPDX-FileCopyrightText = "2026 Giovanni MARIANO"
+SPDX-License-Identifier = "MPL-2.0"
+
+[[annotations]]
+path = [
+    "build/*",
+]
+SPDX-FileCopyrightText = "2026 Giovanni MARIANO"
+SPDX-License-Identifier = "MPL-2.0"
+
+[[annotations]]
+path = "csrc/libalea"
+SPDX-FileCopyrightText = "2026 Giovanni MARIANO"
+SPDX-License-Identifier = "MPL-2.0"
