@@ -79,8 +79,15 @@ def get_extension():
         compile_args.append("-fopenmp")
         link_args.append("-fopenmp")
 
-    # -lm is not needed on Windows (math functions are in the standard library)
-    libraries = [] if sys.platform == "win32" else ["m"]
+    if sys.platform == "win32":
+        # -lm is not needed on Windows (math functions are in the standard library)
+        libraries = []
+        # Statically link the MinGW runtime so the .pyd is self-contained.
+        # Python 3.8+ ignores PATH for DLL search, so without this the
+        # extension would fail to import with missing libgcc_s_seh-1.dll.
+        link_args.append("-static")
+    else:
+        libraries = ["m"]
 
     return Extension(
         name="_alea",
