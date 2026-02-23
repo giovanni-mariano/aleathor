@@ -1,0 +1,27 @@
+Nested universes (3 levels)
+c ============================================================================
+c Three-level universe hierarchy test
+c ============================================================================
+c
+c --- Cell cards ---
+c Universe 0 (main)
+1 0   -1 FILL=1             $ Outer container -> U1
+2 0   1                     $ Void outside
+c Universe 1 (middle level)
+10 0   -10 FILL=2 U=1       $ Inner container -> U2
+11 3 -1.0  10 U=1           $ Water in U1
+c Universe 2 (innermost)
+20 1 -10.0  -20 U=2         $ Fuel sphere
+21 2 -6.5   20 -21 U=2      $ Clad shell
+22 0        21 U=2          $ Gap (void)
+
+c --- Surface cards ---
+1 SO 15.0                   $ Outer boundary
+10 SO 8.0                   $ Middle boundary
+20 SO 3.0                   $ Fuel radius
+21 SO 4.0                   $ Clad outer radius
+
+c --- Data cards ---
+m1 92235.80c 0.05 92238.80c 0.95 8016.80c 2.0  $ UO2
+m2 40090.80c 1.0            $ Zircaloy
+m3 1001.80c 2.0 8016.80c 1.0  $ Water

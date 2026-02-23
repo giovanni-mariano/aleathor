@@ -1,0 +1,20 @@
+RCC macrobody test
+c ============================================================================
+c Right Circular Cylinder macrobody
+c ============================================================================
+c
+c --- Cell cards ---
+1 1 -8.0   -1               $ Vertical RCC (steel)
+2 2 -8.0   -2 1              $ Horizontal RCC (steel)
+3 3 -1.0   -3 #1 #2         $ Water around cylinders
+4 0        3                $ Void outside
+
+c --- Surface cards ---
+1 RCC 0 0 -5  0 0 10  3.0   $ Vertical cylinder (base, axis, radius)
+2 RCC -8 0 0  16 0 0  2.0   $ Horizontal cylinder along X
+3 RPP -15 15 -10 10 -10 10  $ Boundary box
+
+c --- Data cards ---
+m1 26056.80c 1.0            $ Steel
+m2 26056.80c 1.0            $ Steel
+m3 1001.80c 2.0 8016.80c 1.0  $ Water

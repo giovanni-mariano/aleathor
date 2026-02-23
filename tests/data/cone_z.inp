@@ -1,0 +1,19 @@
+Cone geometry (Z-axis)
+c ============================================================================
+c Conical surface test - truncated cone
+c ============================================================================
+c
+c --- Cell cards ---
+1 1 -2.7   -1 2 -3          $ Cone interior (aluminum)
+2 2 -1.0   -4 #1            $ Water around cone
+3 0        4                $ Void
+
+c --- Surface cards ---
+1 KZ 0 0.5                  $ Cone at origin, t^2 = 0.5 (half-angle ~35 deg)
+2 PZ 1.0                    $ Bottom truncation
+3 PZ 8.0                    $ Top truncation
+4 RPP -10 10 -10 10 -2 12   $ Boundary box
+
+c --- Data cards ---
+m1 13027.80c 1.0            $ Aluminum
+m2 1001.80c 2.0 8016.80c 1.0  $ Water

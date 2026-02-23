@@ -112,3 +112,4 @@ Thumbs.db
 # Project specific
 *.inp
 !/examples/*.inp
+!/tests/data/*.inp

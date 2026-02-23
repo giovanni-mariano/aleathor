@@ -1,0 +1,19 @@
+Vertical cylinder model
+c ============================================================================
+c Z-axis cylinder with top/bottom caps
+c ============================================================================
+c
+c --- Cell cards ---
+1 1 -8.0   -1 2 -3          $ Cylinder interior (steel)
+2 2 -1.0   -4 #1            $ Water surrounding
+3 0        4                $ Void outside
+
+c --- Surface cards ---
+1 CZ 3.0                    $ Cylinder radius 3
+2 PZ -5.0                   $ Bottom cap
+3 PZ 5.0                    $ Top cap
+4 RPP -10 10 -10 10 -10 10  $ Outer boundary box
+
+c --- Data cards ---
+m1 26056.80c 1.0            $ Iron (steel)
+m2 1001.80c 2.0 8016.80c 1.0  $ Water

@@ -1,0 +1,14 @@
+Void-only geometry
+c ============================================================================
+c Minimal geometry with only void cells (for edge case testing)
+c ============================================================================
+c
+c --- Cell cards ---
+1 0   -1                    $ Inner void region
+2 0   1                     $ Outer void region
+
+c --- Surface cards ---
+1 SO 10.0                   $ Sphere boundary
+
+c --- Data cards ---
+c (no materials needed for void-only geometry)

@@ -1,0 +1,17 @@
+Rectangular box model
+c ============================================================================
+c Simple RPP (rectangular parallelepiped) geometry
+c ============================================================================
+c
+c --- Cell cards ---
+1 1 -7.8   -1               $ Inner steel box
+2 2 -2.3   1 -2             $ Concrete shielding
+3 0        2                $ Void outside
+
+c --- Surface cards ---
+1 RPP -5 5 -5 5 -5 5        $ Inner box
+2 RPP -15 15 -15 15 -15 15  $ Outer boundary
+
+c --- Data cards ---
+m1 26056.80c 1.0            $ Steel
+m2 14028.80c 1.0 8016.80c 2.0 1001.80c 0.5  $ Concrete approx

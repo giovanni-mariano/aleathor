@@ -1,0 +1,36 @@
+Simplified reactor core
+c ============================================================================
+c Simplified PWR reactor core cross-section
+c ============================================================================
+c
+c --- Cell cards ---
+c Fuel assemblies (simplified as homogenized regions)
+1 1 -4.5   -1               $ Central assembly
+2 1 -4.5   -2               $ Assembly ring 1 (4 assemblies)
+3 1 -4.5   -3
+4 1 -4.5   -4
+5 1 -4.5   -5
+6 2 -1.0   -10 #1 #2 #3 #4 #5  $ Water between assemblies
+7 3 -7.8   10 -11           $ Core barrel (steel)
+8 4 -1.0   11 -12           $ Downcomer water
+9 5 -7.8   12 -13           $ Pressure vessel
+10 0       13               $ Void outside
+
+c --- Surface cards ---
+c Square assembly boxes (21 cm pitch)
+1 RPP -10.5 10.5 -10.5 10.5 -200 200
+2 RPP -31.5 -10.5 -10.5 10.5 -200 200
+3 RPP 10.5 31.5 -10.5 10.5 -200 200
+4 RPP -10.5 10.5 -31.5 -10.5 -200 200
+5 RPP -10.5 10.5 10.5 31.5 -200 200
+10 CZ 45.0                  $ Core barrel inner
+11 CZ 50.0                  $ Core barrel outer
+12 CZ 55.0                  $ Vessel inner
+13 CZ 65.0                  $ Vessel outer
+
+c --- Data cards ---
+m1 92235.80c 0.03 92238.80c 0.67 8016.80c 2.0 1001.80c 0.3  $ Homogenized fuel
+m2 1001.80c 2.0 8016.80c 1.0  $ Water
+m3 26056.80c 0.7 28058.80c 0.2 24052.80c 0.1  $ Stainless steel
+m4 1001.80c 2.0 8016.80c 1.0  $ Downcomer water
+m5 26056.80c 0.97 6012.80c 0.03  $ Carbon steel vessel

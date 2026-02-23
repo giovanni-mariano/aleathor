@@ -1,0 +1,23 @@
+Universe and FILL test
+c ============================================================================
+c Tests universe hierarchy and FILL cards
+c ============================================================================
+c
+c --- Cell cards ---
+c Main universe (U=0)
+1 0        -1 FILL=1        $ Container filled with universe 1
+2 0        1                $ Void outside container
+c Universe 1 - pin cell
+10 1 -10.0  -10 U=1         $ Fuel
+11 2 -6.5   10 -11 U=1      $ Clad
+12 3 -1.0   11 U=1          $ Moderator (fills rest of universe)
+
+c --- Surface cards ---
+1 SO 20.0                   $ Container sphere
+10 CZ 0.5                   $ Fuel radius
+11 CZ 0.6                   $ Clad radius
+
+c --- Data cards ---
+m1 92235.80c 0.05 92238.80c 0.95 8016.80c 2.0  $ UO2
+m2 40090.80c 1.0            $ Zircaloy
+m3 1001.80c 2.0 8016.80c 1.0  $ Water

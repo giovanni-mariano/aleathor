@@ -1,0 +1,32 @@
+Complex boolean operations
+c ============================================================================
+c Tests complex CSG: intersection, union, complement
+c ============================================================================
+c
+c --- Cell cards ---
+c Intersection of sphere and cylinder (lens shape)
+1 1 -10.0  -1 -2            $ Sphere AND cylinder
+c Sphere minus cylinder (sphere with hole)
+2 2 -8.0   -3 4             $ Sphere AND NOT cylinder
+c Union of two spheres
+3 3 -6.0   (-5:-6) 7 -8     $ (Sphere1 OR Sphere2) AND box
+c Complement region
+4 4 -1.0   -9 #1 #2 #3      $ Everything else in boundary
+5 0        9                $ Void outside
+
+c --- Surface cards ---
+1 SO 5.0                    $ Sphere for intersection
+2 CZ 3.0                    $ Cylinder for intersection
+3 S 12 0 0 4.0               $ Sphere for subtraction
+4 C/Z 12 0 2.0               $ Cylinder hole
+5 S 19 0 0 3.0              $ Left sphere of union
+6 S 23 0 0 3.0               $ Right sphere of union
+7 PZ -3.0                   $ Bottom clip for union
+8 PZ 3.0                    $ Top clip for union
+9 RPP -15 30 -10 10 -10 10  $ Outer boundary
+
+c --- Data cards ---
+m1 92235.80c 1.0
+m2 26056.80c 1.0
+m3 13027.80c 1.0
+m4 1001.80c 2.0 8016.80c 1.0

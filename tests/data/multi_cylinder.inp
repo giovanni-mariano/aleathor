@@ -1,0 +1,27 @@
+Multiple cylinders (control rods)
+c ============================================================================
+c Multiple parallel cylinders - like control rod cluster
+c ============================================================================
+c
+c --- Cell cards ---
+1 1 -10.0  -1 7 -8            $ Central rod
+2 1 -10.0  -2 7 -8            $ Rod at +X
+3 1 -10.0  -3 7 -8            $ Rod at -X
+4 1 -10.0  -4 7 -8            $ Rod at +Y
+5 1 -10.0  -5 7 -8            $ Rod at -Y
+6 2 -1.0   -6 #1 #2 #3 #4 #5  $ Water moderator
+7 0        6                $ Void outside
+
+c --- Surface cards ---
+1 C/Z 0 0 1.0               $ Central cylinder
+2 C/Z 4 0 1.0               $ Cylinder at x=4
+3 C/Z -4 0 1.0              $ Cylinder at x=-4
+4 C/Z 0 4 1.0               $ Cylinder at y=4
+5 C/Z 0 -4 1.0              $ Cylinder at y=-4
+6 RPP -10 10 -10 10 -10 10  $ Boundary
+7 PZ -10
+8 PZ  10
+
+c --- Data cards ---
+m1 5010.80c 0.2 6012.80c 0.8  $ B4C control material
+m2 1001.80c 2.0 8016.80c 1.0  $ Water

@@ -1,0 +1,20 @@
+Ellipsoid geometry
+c ============================================================================
+c Ellipsoid surface test
+c ============================================================================
+c
+c --- Cell cards ---
+1 1 -10.0  -1               $ Ellipsoid interior
+2 2 -1.0   1 -2             $ Water shell
+3 0        2                $ Void outside
+
+c --- Surface cards ---
+c Ellipsoid: x^2/a^2 + y^2/b^2 + z^2/c^2 = 1
+c Using GQ surface: Ax^2 + By^2 + Cz^2 + ... = 0
+c For a=4, b=3, c=2: (1/16)x^2 + (1/9)y^2 + (1/4)z^2 - 1 = 0
+1 GQ 0.0625 0.1111 0.25  0 0 0  0 0 0  -1
+2 SO 10.0                   $ Outer boundary
+
+c --- Data cards ---
+m1 92235.80c 1.0            $ Uranium
+m2 1001.80c 2.0 8016.80c 1.0  $ Water

@@ -1,0 +1,17 @@
+Off-center sphere
+c ============================================================================
+c Sphere not at origin - tests S surface
+c ============================================================================
+c
+c --- Cell cards ---
+1 1 -10.0  -1               $ Sphere interior
+2 2 -1.0   1 -2             $ Water shell
+3 0        2                $ Void outside
+
+c --- Surface cards ---
+1 S 3.0 4.0 2.0  5.0        $ Sphere at (3,4,2) radius 5
+2 SO 20.0                   $ Outer boundary at origin
+
+c --- Data cards ---
+m1 92235.80c 1.0
+m2 1001.80c 2.0 8016.80c 1.0

@@ -1,0 +1,14 @@
+Simple sphere in void
+c ============================================================================
+c Simple sphere geometry - basic test case
+c ============================================================================
+c
+c --- Cell cards ---
+1 1 -10.0  -1        $ Fuel sphere
+2 0        1         $ Void outside
+
+c --- Surface cards ---
+1 SO 5.0              $ Sphere at origin, radius 5
+
+c --- Data cards ---
+m1 92235.80c 1.0      $ Uranium

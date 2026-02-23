@@ -1,0 +1,30 @@
+Spallation target assembly
+c ============================================================================
+c Spallation neutron source target (SNS-like)
+c ============================================================================
+c
+c --- Cell cards ---
+1 1 -9.8   -1               $ Mercury target
+2 2 -7.8   1 -2             $ Steel vessel inner wall
+3 3 -1.0   2 -3             $ Cooling water channel
+4 2 -7.8   3 -4             $ Steel vessel outer wall
+5 4 -2.5   4 -5             $ Beryllium reflector
+6 5 -7.8   5 -6             $ Steel shield
+7 0        6                $ Void outside
+
+c --- Surface cards ---
+c Target is a cylinder with hemispherical end cap
+1 RCC 0 0 0  0 0 40  10.0   $ Mercury volume
+2 RCC 0 0 -1  0 0 42  11.0  $ Inner vessel
+3 RCC 0 0 -2  0 0 44  13.0  $ Cooling channel outer
+4 RCC 0 0 -3  0 0 46  14.0  $ Outer vessel
+5 RCC 0 0 -10  0 0 60  25.0  $ Reflector outer
+6 RPP -40 40 -40 40 -20 80  $ Shield boundary
+
+c --- Data cards ---
+m1 80196.80c 0.002 80198.80c 0.10 80199.80c 0.17 80200.80c 0.23
+   80201.80c 0.13 80202.80c 0.30 80204.80c 0.07  $ Mercury
+m2 26056.80c 0.7 28058.80c 0.2 24052.80c 0.1  $ SS316
+m3 1001.80c 2.0 8016.80c 1.0  $ Water
+m4 4009.80c 1.0             $ Beryllium
+m5 26056.80c 0.97 6012.80c 0.03  $ Carbon steel

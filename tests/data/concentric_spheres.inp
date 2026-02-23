@@ -1,0 +1,23 @@
+Concentric spheres - onion model
+c ============================================================================
+c Multiple concentric spherical shells
+c ============================================================================
+c
+c --- Cell cards ---
+1 1 -19.0   -1              $ Inner core (plutonium)
+2 2 -10.0   1 -2            $ Middle shell (uranium)
+3 3 -2.7    2 -3            $ Outer shell (aluminum)
+4 4 -1.0    3 -4            $ Water moderator
+5 0         4               $ Void outside
+
+c --- Surface cards ---
+1 SO 2.0                    $ Core radius
+2 SO 4.0                    $ Middle shell radius
+3 SO 6.0                    $ Outer shell radius
+4 SO 10.0                   $ Moderator boundary
+
+c --- Data cards ---
+m1 94239.80c 1.0            $ Plutonium
+m2 92235.80c 1.0            $ Uranium
+m3 13027.80c 1.0            $ Aluminum
+m4 1001.80c 2.0 8016.80c 1.0  $ Water

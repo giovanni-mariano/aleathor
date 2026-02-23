@@ -1,0 +1,19 @@
+Horizontal cylinder (X-axis)
+c ============================================================================
+c X-axis cylinder - tests CX surface
+c ============================================================================
+c
+c --- Cell cards ---
+1 1 -8.0   -1 2 -3          $ Cylinder interior
+2 2 -1.0   -4 #1            $ Moderator
+3 0        4                $ Void
+
+c --- Surface cards ---
+1 CX 2.5                    $ Cylinder radius along X
+2 PX -8.0                   $ Left cap
+3 PX 8.0                    $ Right cap
+4 RPP -12 12 -8 8 -8 8      $ Boundary
+
+c --- Data cards ---
+m1 26056.80c 1.0
+m2 1001.80c 2.0 8016.80c 1.0

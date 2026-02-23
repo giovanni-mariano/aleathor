@@ -1,0 +1,20 @@
+Hemisphere geometry
+c ============================================================================
+c Hemisphere (sphere cut by plane)
+c ============================================================================
+c
+c --- Cell cards ---
+1 1 -10.0  -1 -2            $ Upper hemisphere
+2 2 -8.0   -1 2             $ Lower hemisphere (different material)
+3 3 -1.0   1 -3             $ Water shell
+4 0        3                $ Void outside
+
+c --- Surface cards ---
+1 SO 5.0                    $ Full sphere
+2 PZ 0.0                    $ Cutting plane at z=0
+3 SO 10.0                   $ Outer boundary
+
+c --- Data cards ---
+m1 92235.80c 1.0            $ Upper half (uranium)
+m2 94239.80c 1.0            $ Lower half (plutonium)
+m3 1001.80c 2.0 8016.80c 1.0  $ Water

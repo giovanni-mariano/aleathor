@@ -1,0 +1,25 @@
+Fuel pin cell
+c ============================================================================
+c Typical PWR fuel pin cell geometry
+c Fuel pellet + gap + cladding + moderator
+c ============================================================================
+c
+c --- Cell cards ---
+1 1 -10.4   -1              $ UO2 fuel pellet
+2 0         1 -2            $ Helium gap (void)
+3 2 -6.5    2 -3            $ Zircaloy cladding
+4 3 -0.7    3 -4 5 -6       $ Water moderator
+5 0         4:(-5):6        $ Void outside
+
+c --- Surface cards ---
+1 CZ 0.4096                 $ Fuel outer radius
+2 CZ 0.4180                 $ Gap outer radius
+3 CZ 0.4750                 $ Clad outer radius
+4 SQ 0.63 0.63 0 0 0 0 -1 0 0 0  $ Square pitch boundary (1.26 cm)
+5 PZ -200.0                 $ Bottom
+6 PZ 200.0                  $ Top
+
+c --- Data cards ---
+m1 92235.80c 0.03 92238.80c 0.97 8016.80c 2.0  $ UO2
+m2 40090.80c 1.0            $ Zircaloy
+m3 1001.80c 2.0 8016.80c 1.0  $ Water

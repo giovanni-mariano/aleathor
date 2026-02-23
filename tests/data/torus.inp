@@ -1,0 +1,19 @@
+Torus geometry (tokamak-like)
+c ============================================================================
+c Torus surface test - tokamak plasma chamber
+c ============================================================================
+c
+c --- Cell cards ---
+1 0        -1               $ Plasma region (void)
+2 1 -7.9   1 -2             $ First wall (steel)
+3 2 -1.0   2 -3             $ Vacuum vessel interior
+4 0        3                $ Void outside
+
+c --- Surface cards ---
+1 TZ 0 0 0  6.0 2.0 2.0     $ Inner torus (R=6, a=b=2)
+2 TZ 0 0 0  6.0 2.5 2.5     $ Outer torus (R=6, a=b=2.5)
+3 RPP -12 12 -12 12 -5 5    $ Bounding box
+
+c --- Data cards ---
+m1 26056.80c 0.7 28058.80c 0.2 24052.80c 0.1  $ Stainless steel
+m2 1001.80c 2.0 8016.80c 1.0  $ Water
