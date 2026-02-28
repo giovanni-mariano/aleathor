@@ -641,21 +641,50 @@ static PyObject* AleaTHORSystem_get_surface_nodes(AleaTHORSystemObject* self, Py
 static PyObject* AleaTHORSystem_add_cell(AleaTHORSystemObject* self, PyObject* args, PyObject* kwds) {
     int cell_id;
     unsigned long root_node;
-    int material_id = 0;
+    int material_index = -1;  /* ALEA_MATERIAL_VOID */
     double density = 0.0;
     int universe_id = 0;
-    static char* kwlist[] = {"cell_id", "root_node", "material_id", "density", "universe_id", NULL};
+    static char* kwlist[] = {"cell_id", "root_node", "material_index", "density", "universe_id", NULL};
 
     if (!PyArg_ParseTupleAndKeywords(args, kwds, "ik|idi", kwlist,
-                                     &cell_id, &root_node, &material_id, &density, &universe_id)) {
+                                     &cell_id, &root_node, &material_index, &density, &universe_id)) {
         return NULL;
     }
     if (!self->sys) { PyErr_SetString(PyExc_RuntimeError, "System not initialized"); return NULL; }
 
-    int idx = alea_add_cell(self->sys, cell_id, (alea_node_id_t)root_node, material_id, density, universe_id);
+    int idx = alea_add_cell(self->sys, cell_id, (alea_node_id_t)root_node, material_index, density, universe_id);
     if (idx < 0) {
         PyErr_SetString(PyExc_RuntimeError, "Failed to add cell");
         return NULL;
+    }
+    return PyLong_FromLong(idx);
+}
+
+/* ============================================================================
+ * AleaTHORSystem Methods - Material Registration
+ * ============================================================================ */
+
+static PyObject* AleaTHORSystem_add_material(AleaTHORSystemObject* self, PyObject* args) {
+    int material_id;
+    if (!PyArg_ParseTuple(args, "i", &material_id)) return NULL;
+    if (!self->sys) { PyErr_SetString(PyExc_RuntimeError, "System not initialized"); return NULL; }
+
+    int idx = alea_add_material(self->sys, material_id);
+    if (idx < 0) {
+        PyErr_SetString(PyExc_RuntimeError, "Failed to add material");
+        return NULL;
+    }
+    return PyLong_FromLong(idx);
+}
+
+static PyObject* AleaTHORSystem_find_material_by_id(AleaTHORSystemObject* self, PyObject* args) {
+    int material_id;
+    if (!PyArg_ParseTuple(args, "i", &material_id)) return NULL;
+    if (!self->sys) { PyErr_SetString(PyExc_RuntimeError, "System not initialized"); return NULL; }
+
+    int idx = alea_find_material_by_id(self->sys, material_id);
+    if (idx < 0) {
+        Py_RETURN_NONE;
     }
     return PyLong_FromLong(idx);
 }

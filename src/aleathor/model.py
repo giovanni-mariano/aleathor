@@ -172,14 +172,22 @@ class Model:
         self._sys.reset()
         self._halfspace_node_cache.clear()
 
+        # Register materials in C system and build id→index map
+        material_index_map = {}  # MCNP material_id → C material_index
+        for cell in self._cells.values():
+            mat_id = cell.material
+            if mat_id != 0 and mat_id not in material_index_map:
+                material_index_map[mat_id] = self._sys.add_material(mat_id)
+
         # Build cells
         for cell in self._cells.values():
             node_id = cell.region._to_csg(self)
             # C expects signed density: negative = g/cm³, positive = atoms/b-cm
             signed_density = -cell.density if cell.density_unit == "g/cm3" else cell.density
+            mat_index = material_index_map.get(cell.material, -1)  # -1 = void
             self._sys.add_cell(
                 cell.id, node_id,
-                material_id=cell.material,
+                material_index=mat_index,
                 density=signed_density,
                 universe_id=cell.universe
             )

@@ -358,7 +358,14 @@ static PyMethodDef AleaTHORSystem_methods[] = {
     /* Cell registration */
     {"add_cell", (PyCFunction)AleaTHORSystem_add_cell,
      METH_VARARGS | METH_KEYWORDS,
-     "add_cell(cell_id, root_node, material_id=0, density=0.0, universe_id=0) -> index"},
+     "add_cell(cell_id, root_node, material_index=-1, density=0.0, universe_id=0) -> index\n\n"
+     "Register a cell. material_index is a material index from add_material(), or -1 for void."},
+
+    /* Material registration */
+    {"add_material", (PyCFunction)AleaTHORSystem_add_material, METH_VARARGS,
+     "add_material(material_id) -> index\n\nRegister a material by MCNP ID. Returns material index."},
+    {"find_material_by_id", (PyCFunction)AleaTHORSystem_find_material_by_id, METH_VARARGS,
+     "find_material_by_id(material_id) -> index or None\n\nFind material index by MCNP ID."},
 
     /* Export */
     {"export_mcnp", (PyCFunction)AleaTHORSystem_export_mcnp,
