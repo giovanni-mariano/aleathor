@@ -689,6 +689,28 @@ static PyObject* AleaTHORSystem_find_material_by_id(AleaTHORSystemObject* self, 
     return PyLong_FromLong(idx);
 }
 
+static PyObject* AleaTHORSystem_cell_set_mixture(AleaTHORSystemObject* self, PyObject* args) {
+    int cell_index, mixture_id;
+    if (!PyArg_ParseTuple(args, "ii", &cell_index, &mixture_id)) return NULL;
+    if (!self->sys) { PyErr_SetString(PyExc_RuntimeError, "System not initialized"); return NULL; }
+
+    if (alea_cell_set_mixture(self->sys, cell_index, mixture_id) < 0) {
+        PyErr_Format(PyExc_RuntimeError, "Failed to set mixture %d on cell index %d", mixture_id, cell_index);
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+static PyObject* AleaTHORSystem_find_mixture_by_id(AleaTHORSystemObject* self, PyObject* args) {
+    int mixture_id;
+    if (!PyArg_ParseTuple(args, "i", &mixture_id)) return NULL;
+    if (!self->sys) { PyErr_SetString(PyExc_RuntimeError, "System not initialized"); return NULL; }
+
+    int idx = alea_find_mixture_by_id(self->sys, mixture_id);
+    if (idx < 0) Py_RETURN_NONE;
+    return PyLong_FromLong(idx);
+}
+
 /* ============================================================================
  * AleaTHORSystem Methods - Material Composition API
  * ============================================================================ */

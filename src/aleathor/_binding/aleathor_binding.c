@@ -425,7 +425,13 @@ static PyMethodDef AleaTHORSystem_methods[] = {
     {"material_is_weight_fraction", (PyCFunction)AleaTHORSystem_material_is_weight_fraction, METH_VARARGS,
      "material_is_weight_fraction(mat_index) -> bool\n\nTrue if material uses weight fractions."},
 
+    /* Cell-mixture assignment */
+    {"cell_set_mixture", (PyCFunction)AleaTHORSystem_cell_set_mixture, METH_VARARGS,
+     "cell_set_mixture(cell_index, mixture_id)\n\nSet cell material to a mixture."},
+
     /* Mixture queries */
+    {"find_mixture_by_id", (PyCFunction)AleaTHORSystem_find_mixture_by_id, METH_VARARGS,
+     "find_mixture_by_id(mixture_id) -> index or None\n\nFind mixture index by ID."},
     {"mixture_count", (PyCFunction)AleaTHORSystem_mixture_count, METH_NOARGS,
      "mixture_count() -> int\n\nGet number of mixtures."},
     {"mixture_get_id", (PyCFunction)AleaTHORSystem_mixture_get_id, METH_VARARGS,

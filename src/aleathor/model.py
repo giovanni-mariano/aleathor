@@ -278,13 +278,22 @@ class Model:
                 raise RuntimeError("C extension not available")
             self._sys = _alea.System()
 
+    def _is_mixture(self, material_id: int) -> bool:
+        """Check if a material ID refers to a mixture."""
+        if self._sys is None:
+            return False
+        return self._sys.find_mixture_by_id(material_id) is not None
+
     def _ensure_material(self, material_id: int) -> int:
         """Ensure a material is registered in the C system.
 
         Returns the C material index for the given MCNP material ID.
-        Returns -1 for void (material_id == 0).
+        Returns -1 for void (material_id == 0) or mixtures.
         """
         if material_id == 0:
+            return -1
+        # Mixtures are separate — don't register as material
+        if self._is_mixture(material_id):
             return -1
         if material_id not in self._material_index_map:
             self._ensure_sys()
@@ -505,6 +514,10 @@ class Model:
             density=signed_density,
             universe_id=universe
         )
+
+        # Apply mixture if material is a mixture
+        if isinstance(material, int) and material != 0 and self._is_mixture(material):
+            self._sys.cell_set_mixture(index, material)
 
         # Apply fill
         if fill is not None:
