@@ -57,7 +57,7 @@ jobs:
           python-version: "3.14"
       - name: Build C library
         shell: msys2 {0}
-        run: cd csrc/libalea && make lib RELEASE=1 PORTABLE=1
+        run: cd csrc/libalea && make full RELEASE=1 PORTABLE=1
       - name: Install and test
         shell: pwsh
         run: |
