@@ -393,6 +393,47 @@ static PyMethodDef AleaTHORSystem_methods[] = {
     {"find_material_by_id", (PyCFunction)AleaTHORSystem_find_material_by_id, METH_VARARGS,
      "find_material_by_id(material_id) -> index or None\n\nFind material index by MCNP ID."},
 
+    /* Material composition */
+    {"material_count", (PyCFunction)AleaTHORSystem_material_count, METH_NOARGS,
+     "material_count() -> int\n\nGet number of materials."},
+    {"material_get_id", (PyCFunction)AleaTHORSystem_material_get_id, METH_VARARGS,
+     "material_get_id(mat_index) -> int\n\nGet material MCNP ID by index."},
+    {"material_add_nuclide", (PyCFunction)AleaTHORSystem_material_add_nuclide, METH_VARARGS,
+     "material_add_nuclide(mat_index, zaid, library, fraction)\n\n"
+     "Add a nuclide to a material. library can be None."},
+    {"material_add_element", (PyCFunction)AleaTHORSystem_material_add_element, METH_VARARGS,
+     "material_add_element(mat_index, Z, library, fraction)\n\n"
+     "Add an element (natural composition) to a material. library can be None."},
+    {"material_set_density", (PyCFunction)AleaTHORSystem_material_set_density, METH_VARARGS,
+     "material_set_density(mat_index, density)\n\nSet material standard density."},
+    {"material_set_weight_fraction", (PyCFunction)AleaTHORSystem_material_set_weight_fraction, METH_VARARGS,
+     "material_set_weight_fraction(mat_index, is_weight)\n\nSet whether fractions are weight (True) or atom (False)."},
+    {"material_expand_elements", (PyCFunction)AleaTHORSystem_material_expand_elements, METH_VARARGS,
+     "material_expand_elements(mat_index)\n\nExpand element entries to explicit nuclides."},
+    {"material_nuclide_count", (PyCFunction)AleaTHORSystem_material_nuclide_count, METH_VARARGS,
+     "material_nuclide_count(mat_index) -> int\n\nGet number of nuclides in a material."},
+    {"material_get_nuclides", (PyCFunction)AleaTHORSystem_material_get_nuclides, METH_VARARGS,
+     "material_get_nuclides(mat_index) -> list of {zaid, library, fraction}\n\n"
+     "Get all nuclides in a material."},
+    {"material_element_count", (PyCFunction)AleaTHORSystem_material_element_count, METH_VARARGS,
+     "material_element_count(mat_index) -> int\n\nGet number of elements in a material."},
+    {"material_get_elements", (PyCFunction)AleaTHORSystem_material_get_elements, METH_VARARGS,
+     "material_get_elements(mat_index) -> list of {Z, library, fraction}\n\n"
+     "Get all elements in a material."},
+    {"material_get_density", (PyCFunction)AleaTHORSystem_material_get_density, METH_VARARGS,
+     "material_get_density(mat_index) -> float or None\n\nGet material density, or None if not set."},
+    {"material_is_weight_fraction", (PyCFunction)AleaTHORSystem_material_is_weight_fraction, METH_VARARGS,
+     "material_is_weight_fraction(mat_index) -> bool\n\nTrue if material uses weight fractions."},
+
+    /* Mixture queries */
+    {"mixture_count", (PyCFunction)AleaTHORSystem_mixture_count, METH_NOARGS,
+     "mixture_count() -> int\n\nGet number of mixtures."},
+    {"mixture_get_id", (PyCFunction)AleaTHORSystem_mixture_get_id, METH_VARARGS,
+     "mixture_get_id(mix_index) -> int\n\nGet mixture ID by index."},
+    {"mixture_get_components", (PyCFunction)AleaTHORSystem_mixture_get_components, METH_VARARGS,
+     "mixture_get_components(mix_index) -> list of {material_id, fraction}\n\n"
+     "Get components of a mixture."},
+
     /* Export */
     {"export_mcnp", (PyCFunction)AleaTHORSystem_export_mcnp,
      METH_VARARGS | METH_KEYWORDS,

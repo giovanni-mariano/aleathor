@@ -10,7 +10,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Union, Optional
 
-from .model import Model, Material
+from .model import Model
 from .geometry import Region, Halfspace, Intersection, Union as UnionRegion, Complement
 from .surfaces import (
     Surface, Plane, XPlane, YPlane, ZPlane, Sphere,

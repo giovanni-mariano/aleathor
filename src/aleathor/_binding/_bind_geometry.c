@@ -688,3 +688,232 @@ static PyObject* AleaTHORSystem_find_material_by_id(AleaTHORSystemObject* self, 
     }
     return PyLong_FromLong(idx);
 }
+
+/* ============================================================================
+ * AleaTHORSystem Methods - Material Composition API
+ * ============================================================================ */
+
+static PyObject* AleaTHORSystem_material_count(AleaTHORSystemObject* self, PyObject* Py_UNUSED(args)) {
+    if (!self->sys) { PyErr_SetString(PyExc_RuntimeError, "System not initialized"); return NULL; }
+    return PyLong_FromSize_t(alea_material_count(self->sys));
+}
+
+static PyObject* AleaTHORSystem_material_get_id(AleaTHORSystemObject* self, PyObject* args) {
+    int mat_index;
+    if (!PyArg_ParseTuple(args, "i", &mat_index)) return NULL;
+    if (!self->sys) { PyErr_SetString(PyExc_RuntimeError, "System not initialized"); return NULL; }
+
+    int mid = alea_material_get_id(self->sys, mat_index);
+    if (mid < 0) {
+        PyErr_Format(PyExc_IndexError, "Material index %d out of range", mat_index);
+        return NULL;
+    }
+    return PyLong_FromLong(mid);
+}
+
+static PyObject* AleaTHORSystem_material_add_nuclide(AleaTHORSystemObject* self, PyObject* args) {
+    int mat_index, zaid;
+    const char* library = NULL;
+    double fraction;
+    if (!PyArg_ParseTuple(args, "iizd", &mat_index, &zaid, &library, &fraction)) return NULL;
+    if (!self->sys) { PyErr_SetString(PyExc_RuntimeError, "System not initialized"); return NULL; }
+
+    if (alea_material_add_nuclide(self->sys, mat_index, zaid, library, fraction) < 0) {
+        PyErr_Format(PyExc_RuntimeError, "Failed to add nuclide %d to material index %d", zaid, mat_index);
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+static PyObject* AleaTHORSystem_material_add_element(AleaTHORSystemObject* self, PyObject* args) {
+    int mat_index, Z;
+    const char* library = NULL;
+    double fraction;
+    if (!PyArg_ParseTuple(args, "iizd", &mat_index, &Z, &library, &fraction)) return NULL;
+    if (!self->sys) { PyErr_SetString(PyExc_RuntimeError, "System not initialized"); return NULL; }
+
+    if (alea_material_add_element(self->sys, mat_index, Z, library, fraction) < 0) {
+        PyErr_Format(PyExc_RuntimeError, "Failed to add element Z=%d to material index %d", Z, mat_index);
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+static PyObject* AleaTHORSystem_material_set_density(AleaTHORSystemObject* self, PyObject* args) {
+    int mat_index;
+    double density;
+    if (!PyArg_ParseTuple(args, "id", &mat_index, &density)) return NULL;
+    if (!self->sys) { PyErr_SetString(PyExc_RuntimeError, "System not initialized"); return NULL; }
+
+    if (alea_material_set_density(self->sys, mat_index, density) < 0) {
+        PyErr_Format(PyExc_IndexError, "Material index %d out of range", mat_index);
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+static PyObject* AleaTHORSystem_material_set_weight_fraction(AleaTHORSystemObject* self, PyObject* args) {
+    int mat_index, is_weight;
+    if (!PyArg_ParseTuple(args, "ip", &mat_index, &is_weight)) return NULL;
+    if (!self->sys) { PyErr_SetString(PyExc_RuntimeError, "System not initialized"); return NULL; }
+
+    if (alea_material_set_weight_fraction(self->sys, mat_index, is_weight) < 0) {
+        PyErr_Format(PyExc_IndexError, "Material index %d out of range", mat_index);
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+static PyObject* AleaTHORSystem_material_expand_elements(AleaTHORSystemObject* self, PyObject* args) {
+    int mat_index;
+    if (!PyArg_ParseTuple(args, "i", &mat_index)) return NULL;
+    if (!self->sys) { PyErr_SetString(PyExc_RuntimeError, "System not initialized"); return NULL; }
+
+    if (alea_material_expand_elements(self->sys, mat_index) < 0) {
+        PyErr_Format(PyExc_RuntimeError, "Failed to expand elements for material index %d", mat_index);
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+static PyObject* AleaTHORSystem_material_nuclide_count(AleaTHORSystemObject* self, PyObject* args) {
+    int mat_index;
+    if (!PyArg_ParseTuple(args, "i", &mat_index)) return NULL;
+    if (!self->sys) { PyErr_SetString(PyExc_RuntimeError, "System not initialized"); return NULL; }
+    return PyLong_FromSize_t(alea_material_nuclide_count(self->sys, mat_index));
+}
+
+static PyObject* AleaTHORSystem_material_get_nuclides(AleaTHORSystemObject* self, PyObject* args) {
+    int mat_index;
+    if (!PyArg_ParseTuple(args, "i", &mat_index)) return NULL;
+    if (!self->sys) { PyErr_SetString(PyExc_RuntimeError, "System not initialized"); return NULL; }
+
+    size_t count = alea_material_nuclide_count(self->sys, mat_index);
+    PyObject* list = PyList_New(count);
+    if (!list) return NULL;
+
+    for (size_t i = 0; i < count; i++) {
+        int zaid;
+        const char* library;
+        double fraction;
+        if (alea_material_nuclide_get(self->sys, mat_index, i, &zaid, &library, &fraction) < 0) {
+            Py_DECREF(list);
+            PyErr_Format(PyExc_RuntimeError, "Failed to get nuclide %zu from material %d", i, mat_index);
+            return NULL;
+        }
+        PyObject* entry = Py_BuildValue("{s:i,s:s,s:d}",
+            "zaid", zaid,
+            "library", library ? library : "",
+            "fraction", fraction);
+        if (!entry) { Py_DECREF(list); return NULL; }
+        PyList_SET_ITEM(list, i, entry);
+    }
+    return list;
+}
+
+static PyObject* AleaTHORSystem_material_element_count(AleaTHORSystemObject* self, PyObject* args) {
+    int mat_index;
+    if (!PyArg_ParseTuple(args, "i", &mat_index)) return NULL;
+    if (!self->sys) { PyErr_SetString(PyExc_RuntimeError, "System not initialized"); return NULL; }
+    return PyLong_FromSize_t(alea_material_element_count(self->sys, mat_index));
+}
+
+static PyObject* AleaTHORSystem_material_get_elements(AleaTHORSystemObject* self, PyObject* args) {
+    int mat_index;
+    if (!PyArg_ParseTuple(args, "i", &mat_index)) return NULL;
+    if (!self->sys) { PyErr_SetString(PyExc_RuntimeError, "System not initialized"); return NULL; }
+
+    size_t count = alea_material_element_count(self->sys, mat_index);
+    PyObject* list = PyList_New(count);
+    if (!list) return NULL;
+
+    for (size_t i = 0; i < count; i++) {
+        int Z;
+        const char* library;
+        double fraction;
+        if (alea_material_element_get(self->sys, mat_index, i, &Z, &library, &fraction) < 0) {
+            Py_DECREF(list);
+            PyErr_Format(PyExc_RuntimeError, "Failed to get element %zu from material %d", i, mat_index);
+            return NULL;
+        }
+        PyObject* entry = Py_BuildValue("{s:i,s:s,s:d}",
+            "Z", Z,
+            "library", library ? library : "",
+            "fraction", fraction);
+        if (!entry) { Py_DECREF(list); return NULL; }
+        PyList_SET_ITEM(list, i, entry);
+    }
+    return list;
+}
+
+static PyObject* AleaTHORSystem_material_get_density(AleaTHORSystemObject* self, PyObject* args) {
+    int mat_index;
+    if (!PyArg_ParseTuple(args, "i", &mat_index)) return NULL;
+    if (!self->sys) { PyErr_SetString(PyExc_RuntimeError, "System not initialized"); return NULL; }
+
+    double density;
+    bool has_density;
+    if (alea_material_get_density(self->sys, mat_index, &density, &has_density) < 0) {
+        PyErr_Format(PyExc_IndexError, "Material index %d out of range", mat_index);
+        return NULL;
+    }
+    if (!has_density) Py_RETURN_NONE;
+    return PyFloat_FromDouble(density);
+}
+
+static PyObject* AleaTHORSystem_material_is_weight_fraction(AleaTHORSystemObject* self, PyObject* args) {
+    int mat_index;
+    if (!PyArg_ParseTuple(args, "i", &mat_index)) return NULL;
+    if (!self->sys) { PyErr_SetString(PyExc_RuntimeError, "System not initialized"); return NULL; }
+
+    bool is_weight = alea_material_is_weight_fraction(self->sys, mat_index);
+    return PyBool_FromLong(is_weight);
+}
+
+/* ============================================================================
+ * AleaTHORSystem Methods - Mixture Query API
+ * ============================================================================ */
+
+static PyObject* AleaTHORSystem_mixture_count(AleaTHORSystemObject* self, PyObject* Py_UNUSED(args)) {
+    if (!self->sys) { PyErr_SetString(PyExc_RuntimeError, "System not initialized"); return NULL; }
+    return PyLong_FromSize_t(alea_mixture_count(self->sys));
+}
+
+static PyObject* AleaTHORSystem_mixture_get_id(AleaTHORSystemObject* self, PyObject* args) {
+    int mix_index;
+    if (!PyArg_ParseTuple(args, "i", &mix_index)) return NULL;
+    if (!self->sys) { PyErr_SetString(PyExc_RuntimeError, "System not initialized"); return NULL; }
+
+    int mid = alea_mixture_get_id(self->sys, mix_index);
+    if (mid < 0) {
+        PyErr_Format(PyExc_IndexError, "Mixture index %d out of range", mix_index);
+        return NULL;
+    }
+    return PyLong_FromLong(mid);
+}
+
+static PyObject* AleaTHORSystem_mixture_get_components(AleaTHORSystemObject* self, PyObject* args) {
+    int mix_index;
+    if (!PyArg_ParseTuple(args, "i", &mix_index)) return NULL;
+    if (!self->sys) { PyErr_SetString(PyExc_RuntimeError, "System not initialized"); return NULL; }
+
+    size_t count = alea_mixture_component_count(self->sys, mix_index);
+    PyObject* list = PyList_New(count);
+    if (!list) return NULL;
+
+    for (size_t i = 0; i < count; i++) {
+        int material_id;
+        double fraction;
+        if (alea_mixture_component_get(self->sys, mix_index, i, &material_id, &fraction) < 0) {
+            Py_DECREF(list);
+            PyErr_Format(PyExc_RuntimeError, "Failed to get component %zu from mixture %d", i, mix_index);
+            return NULL;
+        }
+        PyObject* entry = Py_BuildValue("{s:i,s:d}",
+            "material_id", material_id,
+            "fraction", fraction);
+        if (!entry) { Py_DECREF(list); return NULL; }
+        PyList_SET_ITEM(list, i, entry);
+    }
+    return list;
+}

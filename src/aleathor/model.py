@@ -26,24 +26,132 @@ except ImportError:
 from .collections import CellCollection, Cell, TraceResult, TraceSegment, VoidResult
 
 
-@dataclass
 class Material:
-    """Material definition.
+    """Material definition backed by the C system.
 
-    Attributes:
-        id: Material number (must be positive).
-        name: Optional material name.
-        density: Material density.
-        composition: Optional composition dict {nuclide: fraction}.
+    Provides methods to define nuclide/element composition and query
+    material properties. All mutations are pushed to C immediately.
+
+    Example:
+        mat = model.add_material(1, name="Steel")
+        mat.add_element(26, 0.70)   # Fe 70%
+        mat.add_element(24, 0.18)   # Cr 18%
+        mat.add_element(28, 0.12)   # Ni 12%
+        mat.density = 7.8
+        mat.weight_fractions = True
     """
-    id: int
-    name: Optional[str] = None
-    density: float = 0.0
-    composition: Dict[str, float] = field(default_factory=dict)
 
-    def __post_init__(self):
-        if self.id <= 0:
-            raise ValueError("Material ID must be positive")
+    def __init__(self, model: 'Model', mat_index: int, material_id: int,
+                 name: Optional[str] = None):
+        self._model = model
+        self._index = mat_index
+        self._id = material_id
+        self._name = name
+
+    @property
+    def id(self) -> int:
+        """Material MCNP ID."""
+        return self._id
+
+    @property
+    def name(self) -> Optional[str]:
+        """Material name."""
+        return self._name
+
+    @name.setter
+    def name(self, value: Optional[str]) -> None:
+        self._name = value
+
+    @property
+    def density(self) -> Optional[float]:
+        """Material standard density, or None if not set."""
+        return self._model._sys.material_get_density(self._index)
+
+    @density.setter
+    def density(self, value: float) -> None:
+        self._model._sys.material_set_density(self._index, value)
+
+    @property
+    def weight_fractions(self) -> bool:
+        """True if fractions are weight fractions, False for atom fractions."""
+        return self._model._sys.material_is_weight_fraction(self._index)
+
+    @weight_fractions.setter
+    def weight_fractions(self, value: bool) -> None:
+        self._model._sys.material_set_weight_fraction(self._index, value)
+
+    def add_nuclide(self, zaid: int, fraction: float,
+                    library: Optional[str] = None) -> 'Material':
+        """Add a nuclide to this material.
+
+        Args:
+            zaid: ZAID (ZZAAA format, e.g. 92235 for U-235)
+            fraction: Atom or weight fraction (positive)
+            library: Cross-section library suffix (e.g. ".80c"), or None
+
+        Returns:
+            self (for chaining)
+        """
+        self._model._sys.material_add_nuclide(self._index, zaid, library, fraction)
+        return self
+
+    def add_element(self, Z: int, fraction: float,
+                    library: Optional[str] = None) -> 'Material':
+        """Add an element with natural isotopic composition.
+
+        Args:
+            Z: Atomic number (1-118)
+            fraction: Atom or weight fraction (positive)
+            library: Library suffix for generated nuclides, or None
+
+        Returns:
+            self (for chaining)
+        """
+        self._model._sys.material_add_element(self._index, Z, library, fraction)
+        return self
+
+    def expand_elements(self) -> 'Material':
+        """Expand element entries to explicit nuclides (natural abundances).
+
+        Returns:
+            self (for chaining)
+        """
+        self._model._sys.material_expand_elements(self._index)
+        return self
+
+    @property
+    def nuclides(self) -> List[Dict[str, Any]]:
+        """List of nuclides: [{zaid, library, fraction}, ...]."""
+        return self._model._sys.material_get_nuclides(self._index)
+
+    @property
+    def elements(self) -> List[Dict[str, Any]]:
+        """List of elements: [{Z, library, fraction}, ...]."""
+        return self._model._sys.material_get_elements(self._index)
+
+    def __repr__(self) -> str:
+        parts = [f"Material({self._id}"]
+        if self._name:
+            parts[0] += f", name={self._name!r}"
+        d = self.density
+        if d is not None:
+            parts[0] += f", density={d}"
+        nn = self._model._sys.material_nuclide_count(self._index)
+        ne = self._model._sys.material_element_count(self._index)
+        if nn > 0:
+            parts[0] += f", {nn} nuclides"
+        if ne > 0:
+            parts[0] += f", {ne} elements"
+        parts[0] += ")"
+        return parts[0]
+
+    def __eq__(self, other: object) -> bool:
+        if isinstance(other, Material):
+            return self._model is other._model and self._id == other._id
+        return False
+
+    def __hash__(self) -> int:
+        return hash((id(self._model), self._id))
 
 
 @dataclass
@@ -156,6 +264,7 @@ class Model:
 
         # Material MCNP ID -> C material index mapping
         self._material_index_map: Dict[int, int] = {}
+        self._mixture_names: Dict[int, str] = {}  # mixture_id -> name
 
         # Internal C system (created lazily)
         self._sys = None
@@ -338,7 +447,7 @@ class Model:
     # =========================================================================
 
     def add_cell(self, region: 'Region', cell_id: Optional[int] = None,
-                 material: int = 0, density: float = 0.0,
+                 material: Union[int, Material] = 0, density: float = 0.0,
                  density_unit: str = "g/cm3",
                  name: Optional[str] = None, universe: int = 0,
                  fill: Optional[int] = None, importance: float = 1.0) -> Cell:
@@ -349,7 +458,7 @@ class Model:
         Args:
             region: CSG region defining the cell.
             cell_id: Cell number (auto-assigned if None).
-            material: Material number (0 for void).
+            material: Material object or material ID (0 for void).
             density: Material density (positive value).
             density_unit: Density unit — ``"g/cm3"`` (default) or
                 ``"atoms/b-cm"``.
@@ -365,6 +474,10 @@ class Model:
             raise ValueError(
                 f"density_unit must be 'g/cm3' or 'atoms/b-cm', got {density_unit!r}"
             )
+
+        # Accept Material object or int
+        if isinstance(material, Material):
+            material = material.id
 
         self._ensure_sys()
 
@@ -454,7 +567,8 @@ class Model:
             self._importances.pop(cell_id, None)
             self._regions.pop(cell_id, None)
 
-    def update_cell(self, cell_id: int, material: Optional[int] = None,
+    def update_cell(self, cell_id: int,
+                    material: Optional[Union[int, Material]] = None,
                     density: Optional[float] = None,
                     density_unit: Optional[str] = None,
                     importance: Optional[float] = None) -> Cell:
@@ -462,7 +576,7 @@ class Model:
 
         Args:
             cell_id: Cell ID to update
-            material: New material ID (None to keep current)
+            material: New Material object or ID (None to keep current)
             density: New density (None to keep current)
             density_unit: New density unit (None to keep current)
             importance: New importance (None to keep current)
@@ -482,6 +596,8 @@ class Model:
             raise KeyError(f"Cell {cell_id} not found")
 
         if material is not None:
+            if isinstance(material, Material):
+                material = material.id
             mat_index = self._ensure_material(material)
             self._sys.cell_set_material(idx, mat_index)
         if density is not None or density_unit is not None:
@@ -542,50 +658,81 @@ class Model:
     # =========================================================================
 
     def add_material(self, material_id: int, name: Optional[str] = None,
-                     density: float = 0.0,
-                     composition: Optional[Dict[str, float]] = None) -> Material:
+                     density: Optional[float] = None) -> Material:
         """Add a material to the model.
 
         Args:
-            material_id: Material number.
+            material_id: Material number (positive integer).
             name: Optional material name.
-            density: Default density.
-            composition: Nuclide composition {nuclide: fraction}.
+            density: Optional standard density (g/cm3 if positive).
 
         Returns:
-            The created Material object.
+            Material object for adding nuclides/elements.
+
+        Example:
+            mat = model.add_material(1, name="Steel")
+            mat.add_element(26, 0.70)   # Fe
+            mat.add_element(24, 0.18)   # Cr
+            mat.add_element(28, 0.12)   # Ni
+            mat.density = 7.8
         """
+        if material_id <= 0:
+            raise ValueError("Material ID must be positive")
         if material_id in self._materials:
             raise ValueError(f"Material {material_id} already exists")
 
-        mat = Material(
-            id=material_id,
-            name=name,
-            density=density,
-            composition=composition or {}
-        )
+        mat_index = self._ensure_material(material_id)
+        mat = Material(self, mat_index, material_id, name=name)
+
+        if density is not None:
+            mat.density = density
 
         self._materials[material_id] = mat
         return mat
 
     def get_material(self, material_id: int) -> Material:
-        """Get material by ID."""
-        if material_id not in self._materials:
+        """Get material by ID.
+
+        Works for both Python-created and C-loaded materials.
+        """
+        if material_id in self._materials:
+            return self._materials[material_id]
+
+        # Try to find in C system
+        self._ensure_sys()
+        idx = self._sys.find_material_by_id(material_id)
+        if idx is None:
             raise KeyError(f"Material {material_id} not found")
-        return self._materials[material_id]
+        mat = Material(self, idx, material_id)
+        self._materials[material_id] = mat
+        return mat
 
     @property
     def materials(self) -> List[Material]:
-        """Get all materials."""
-        return list(self._materials.values())
+        """Get all materials.
+
+        Returns materials from both Python-created and C-loaded sources.
+        """
+        self._ensure_sys()
+        count = self._sys.material_count()
+        result = []
+        for i in range(count):
+            mid = self._sys.material_get_id(i)
+            if mid in self._materials:
+                result.append(self._materials[mid])
+            else:
+                mat = Material(self, i, mid)
+                self._materials[mid] = mat
+                result.append(mat)
+        return result
 
     def create_mixture(self, material_ids: List[int], fractions: List[float],
                        new_id: int = 0, name: Optional[str] = None) -> int:
         """Create a mixture of existing materials.
 
         Creates a new material as a weighted combination of existing materials.
-        Fractions are normalized automatically. The mixture stores references
-        to the original materials, which is preserved in MCNP export comments.
+        Fractions are normalized automatically. The mixture is stored in the
+        C backend and will be exported as a combined material card.
 
         Args:
             material_ids: List of material IDs to mix
@@ -594,21 +741,15 @@ class Model:
             name: Optional name for the mixture
 
         Returns:
-            Assigned material ID
+            Assigned mixture ID
 
         Example:
-            # Create 70% M1 + 30% M2 mixture
             mix_id = model.create_mixture([1, 2], [0.7, 0.3], name="fuel-clad-mix")
         """
         self._ensure_sys()
-        self._ensure_sys()
         mix_id = self._sys.create_mixture(material_ids, fractions, new_id)
-
-        # Track in Python materials dict too
         if name:
-            mat = Material(id=mix_id, name=name)
-            self._materials[mix_id] = mat
-
+            self._mixture_names[mix_id] = name
         return mix_id
 
     # =========================================================================
@@ -696,6 +837,13 @@ class Model:
     # Export
     # =========================================================================
 
+    def _expand_all_elements(self) -> None:
+        """Expand element entries to nuclides for all materials before export."""
+        count = self._sys.material_count()
+        for i in range(count):
+            if self._sys.material_element_count(i) > 0:
+                self._sys.material_expand_elements(i)
+
     def export_mcnp(self, filename: Union[str, Path]) -> None:
         """Export model to MCNP format.
 
@@ -703,6 +851,7 @@ class Model:
             filename: Output file path.
         """
         self._ensure_sys()
+        self._expand_all_elements()
         self._sys.export_mcnp(str(filename))
 
     def export_openmc(self, filename: Union[str, Path]) -> None:
@@ -712,6 +861,7 @@ class Model:
             filename: Output file path (geometry.xml).
         """
         self._ensure_sys()
+        self._expand_all_elements()
         self._sys.export_openmc(str(filename))
 
     def to_mcnp_string(self) -> str:

@@ -62,7 +62,10 @@ class Cell:
         return self._get_info()['material_id']
 
     @material.setter
-    def material(self, value: int) -> None:
+    def material(self, value) -> None:
+        from .model import Material
+        if isinstance(value, Material):
+            value = value.id
         mat_index = self._model._ensure_material(value)
         self._model._sys.cell_set_material(self._index, mat_index)
         self._invalidate_cache()
