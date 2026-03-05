@@ -200,21 +200,88 @@ class TestPlotRayPath:
         import matplotlib.pyplot as plt
         from aleathor import plot_ray_path
 
-        # Get ray trace segments
         trace = simple_model.trace(origin=(-10, 0, 0), direction=(1, 0, 0))
-        segments = [
-            {
-                't_enter': seg.t_enter,
-                't_exit': seg.t_exit,
-                'cell_id': seg.cell.id if seg.cell else -1,
-                'material_id': seg.material
-            }
-            for seg in trace
-        ]
+        ax = plot_ray_path(trace, t_max=20)
 
+        assert ax is not None
+        plt.close('all')
+
+    def test_trace_plot_method(self, simple_model):
+        """TraceResult.plot() convenience method should work."""
+        import matplotlib.pyplot as plt
+
+        trace = simple_model.trace(origin=(-10, 0, 0), direction=(1, 0, 0))
+        ax = trace.plot(t_max=20)
+
+        assert ax is not None
+        plt.close('all')
+
+    def test_accepts_raw_dicts(self, simple_model):
+        """Should still accept raw segment dicts for backward compat."""
+        import matplotlib.pyplot as plt
+        from aleathor import plot_ray_path
+
+        segments = [
+            {'t_enter': 0.0, 't_exit': 5.0, 'cell_id': 1, 'material_id': 1},
+            {'t_enter': 5.0, 't_exit': 10.0, 'cell_id': -1, 'material_id': 0},
+        ]
         ax = plot_ray_path(segments, t_max=20)
 
         assert ax is not None
+        plt.close('all')
+
+    def test_legend_shown(self, simple_model):
+        """Should show a legend by default."""
+        import matplotlib.pyplot as plt
+        from aleathor import plot_ray_path
+
+        trace = simple_model.trace(origin=(-10, 0, 0), direction=(1, 0, 0))
+        ax = plot_ray_path(trace, t_max=20)
+
+        assert ax.get_legend() is not None
+        plt.close('all')
+
+    def test_legend_hidden(self, simple_model):
+        """show_legend=False should hide legend."""
+        import matplotlib.pyplot as plt
+        from aleathor import plot_ray_path
+
+        trace = simple_model.trace(origin=(-10, 0, 0), direction=(1, 0, 0))
+        ax = plot_ray_path(trace, t_max=20, show_legend=False)
+
+        assert ax.get_legend() is None
+        plt.close('all')
+
+    def test_by_material(self, simple_model):
+        """by_material=True should label bars with material IDs."""
+        import matplotlib.pyplot as plt
+        from aleathor import plot_ray_path
+
+        trace = simple_model.trace(origin=(-10, 0, 0), direction=(1, 0, 0))
+        ax = plot_ray_path(trace, t_max=20, by_material=True)
+
+        assert ax is not None
+        plt.close('all')
+
+    def test_cell_names_shown(self):
+        """Cells with names should show names instead of IDs."""
+        import matplotlib.pyplot as plt
+        import aleathor as at
+        from aleathor import plot_ray_path
+
+        model = at.Model("Name test")
+        s = at.Sphere(0, 0, 0, 5, surface_id=1)
+        b = at.Sphere(0, 0, 0, 10, surface_id=2)
+        model.add_cell(region=-s, material=1, density=1.0, name="fuel")
+        model.add_cell(region=+s & -b, material=2, density=2.0, name="clad")
+
+        trace = model.trace(origin=(-10, 0, 0), direction=(1, 0, 0))
+        ax = plot_ray_path(trace, t_max=20)
+
+        # Check that cell name text appears in the axes
+        texts = [t.get_text() for t in ax.texts]
+        assert "fuel" in texts
+        assert "clad" in texts
         plt.close('all')
 
 

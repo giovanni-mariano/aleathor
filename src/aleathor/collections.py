@@ -20,6 +20,11 @@ import math
 if TYPE_CHECKING:
     from .model import Model, Universe
 
+try:
+    import _alea
+except ImportError:
+    _alea = None
+
 
 @dataclass
 class Cell:
@@ -58,8 +63,8 @@ class Cell:
 
     @material.setter
     def material(self, value: int) -> None:
-        self._require_py_cell().material = value
-        self._model._dirty = True
+        mat_index = self._model._ensure_material(value)
+        self._model._sys.cell_set_material(self._index, mat_index)
         self._invalidate_cache()
 
     @property
@@ -69,17 +74,14 @@ class Cell:
 
     @density.setter
     def density(self, value: float) -> None:
-        self._require_py_cell().density = abs(value)
-        self._model._dirty = True
+        info = self._get_info()
+        signed = -abs(value) if info.get('is_mass_density', True) else abs(value)
+        self._model._sys.cell_set_density(self._index, signed)
         self._invalidate_cache()
 
     @property
     def density_unit(self) -> str:
         """Density unit — ``"g/cm3"`` or ``"atoms/b-cm"``."""
-        py_cell = self._get_py_cell()
-        if py_cell is not None and hasattr(py_cell, 'density_unit'):
-            return py_cell.density_unit
-        # Fall back to C info for loaded-only models
         info = self._get_info()
         if info.get('is_mass_density', True):
             return "g/cm3"
@@ -91,8 +93,10 @@ class Cell:
             raise ValueError(
                 f"density_unit must be 'g/cm3' or 'atoms/b-cm', got {value!r}"
             )
-        self._require_py_cell().density_unit = value
-        self._model._dirty = True
+        info = self._get_info()
+        current_density = abs(info['density'])
+        signed = -current_density if value == "g/cm3" else current_density
+        self._model._sys.cell_set_density(self._index, signed)
         self._invalidate_cache()
 
     @property
@@ -108,27 +112,18 @@ class Cell:
 
     @fill.setter
     def fill(self, value: Optional[int]) -> None:
-        py_cell = self._require_py_cell()
-        py_cell.fill = value
-        py_cell.fill_transform = 0 if value is not None else None
-        if not self._model._dirty and self._model._sys is not None:
-            fill_id = value if value is not None else -1
-            self._model._sys.set_fill(self._index, fill_id, 0)
-        else:
-            self._model._dirty = True
+        fill_id = value if value is not None else -1
+        self._model._sys.set_fill(self._index, fill_id, 0)
         self._invalidate_cache()
 
     @property
     def name(self) -> Optional[str]:
         """Cell name (if assigned during construction)."""
-        py_cell = self._get_py_cell()
-        if py_cell is not None and hasattr(py_cell, 'name'):
-            return py_cell.name
-        return None
+        return self._model._names.get(self.id)
 
     @name.setter
     def name(self, value: Optional[str]) -> None:
-        self._require_py_cell().name = value
+        self._model._names[self.id] = value
 
     @property
     def bounds(self) -> Tuple[float, float, float, float, float, float]:
@@ -151,26 +146,18 @@ class Cell:
 
         For models constructed via the Python API, returns the Region
         used to define the cell. For models loaded from file (e.g. MCNP),
-        returns an ``_ImportedRegion`` whose ``repr()`` shows the
-        reconstructed CSG expression (e.g. ``-1 & +2``) and whose
-        ``get_surfaces()`` returns the referenced surface IDs.
+        returns None (the C backend owns the CSG node).
         """
-        py_cell = self._get_py_cell()
-        if py_cell is not None and hasattr(py_cell, 'region'):
-            return py_cell.region
-        return None
+        return self._model._regions.get(self.id)
 
     @property
     def importance(self) -> float:
         """Particle importance (defaults to 1.0 if not set)."""
-        py_cell = self._get_py_cell()
-        if py_cell is not None and hasattr(py_cell, 'importance'):
-            return py_cell.importance
-        return 1.0
+        return self._model._importances.get(self.id, 1.0)
 
     @importance.setter
     def importance(self, value: float) -> None:
-        self._require_py_cell().importance = value
+        self._model._importances[self.id] = value
 
     @property
     def depth(self) -> int:
@@ -211,26 +198,47 @@ class Cell:
         """Lattice dimensions (imin,imax,jmin,jmax,kmin,kmax), or None if not a lattice."""
         return self._get_info().get('lat_fill_dims')
 
-    def _get_py_cell(self) -> Any:
-        """Get the Python Cell object if available."""
-        if hasattr(self._model, '_cells'):
-            return self._model._cells.get(self.id)
-        return None
+    @property
+    def comments(self) -> Optional[str]:
+        """Comment lines preceding this cell (from MCNP 'C' lines), or None."""
+        return self._get_info().get('comments')
 
-    def _require_py_cell(self):
-        """Return the Python Cell backing this view, or raise."""
-        py_cell = self._get_py_cell()
-        if py_cell is None:
-            raise RuntimeError(
-                f"Cell {self.id} cannot be modified (no Python backing object)"
-            )
-        return py_cell
+    @comments.setter
+    def comments(self, value: Optional[str]) -> None:
+        self._model._ensure_sys()
+        self._model._sys.set_comment(self._index, value)
+        self._invalidate_cache()
+
+    @property
+    def inline_comment(self) -> Optional[str]:
+        """Inline comment (from MCNP '$' comment), or None."""
+        return self._get_info().get('inline_comment')
+
+    @inline_comment.setter
+    def inline_comment(self, value: Optional[str]) -> None:
+        self._model._ensure_sys()
+        self._model._sys.set_inline_comment(self._index, value)
+        self._invalidate_cache()
+
+    def expr(self, style: str = "mcnp") -> str:
+        """Get CSG expression string for this cell.
+
+        Args:
+            style: Output style — ``"mcnp"`` (default) or ``"openmc"``.
+
+        Returns:
+            Human-readable CSG expression string.
+        """
+        self._model._ensure_sys()
+        if style == "openmc":
+            return self._model._sys.cell_expr(self._index,
+                                              union_op=" | ", inter_op=" ", compl_op="~")
+        return self._model._sys.cell_expr(self._index)
 
     def _get_info(self) -> Dict[str, Any]:
         """Get cell info from C system (cached)."""
         if self._info is None:
-            self._model._rebuild_if_needed()
-            # Re-resolve index after a possible rebuild
+            self._model._ensure_sys()
             if self._cell_id is not None:
                 resolved = self._model._sys.cell_find(self._cell_id)
                 if resolved is not None:
@@ -261,13 +269,7 @@ class Cell:
                 f"Expected Universe or int, got {type(universe).__name__}"
             )
 
-        py_cell = self._require_py_cell()
-        py_cell.fill = fill_id
-        py_cell.fill_transform = transform
-        if not self._model._dirty and self._model._sys is not None:
-            self._model._sys.set_fill(self._index, fill_id, transform)
-        else:
-            self._model._dirty = True
+        self._model._sys.set_fill(self._index, fill_id, transform)
         self._invalidate_cache()
 
     def unfill(self) -> None:
@@ -283,7 +285,7 @@ class Cell:
         Returns:
             True if point is inside this cell
         """
-        self._model._rebuild_if_needed()
+        self._model._ensure_sys()
         result = self._model._sys.find_cell(x, y, z)
         if result is None:
             return False
@@ -339,7 +341,7 @@ class CellCollection:
         if self._indices is not None:
             return self._indices
         # All cells
-        self._model._rebuild_if_needed()
+        self._model._ensure_sys()
         return list(range(self._model._sys.cell_count))
 
     def __len__(self) -> int:
@@ -349,18 +351,22 @@ class CellCollection:
         for idx in self._get_indices():
             yield Cell(self._model, idx)
 
-    def __getitem__(self, key: Union[int, slice]) -> Union[Cell, 'CellCollection']:
-        indices = self._get_indices()
-        if isinstance(key, int):
-            if key < 0:
-                key = len(indices) + key
-            if key < 0 or key >= len(indices):
-                raise IndexError(f"Cell index {key} out of range")
-            return Cell(self._model, indices[key])
-        elif isinstance(key, slice):
-            return CellCollection(self._model, indices[key])
-        else:
-            raise TypeError(f"Invalid index type: {type(key)}")
+    def __getitem__(self, cell_id: int) -> Cell:
+        """Get a cell by its ID.
+
+        Args:
+            cell_id: Cell ID (MCNP cell number)
+
+        Returns:
+            Cell object
+
+        Raises:
+            KeyError: If cell ID not found in this collection
+        """
+        cell = self.get(cell_id)
+        if cell is None:
+            raise KeyError(f"Cell {cell_id} not found")
+        return cell
 
     def __contains__(self, cell: Cell) -> bool:
         if not isinstance(cell, Cell):
@@ -383,7 +389,7 @@ class CellCollection:
         Returns:
             New CellCollection with matching cells
         """
-        self._model._rebuild_if_needed()
+        self._model._ensure_sys()
 
         # Use C API filter if available and we're filtering all cells
         if self._indices is None:
@@ -407,7 +413,7 @@ class CellCollection:
         Returns:
             New CellCollection with matching cells
         """
-        self._model._rebuild_if_needed()
+        self._model._ensure_sys()
 
         # Use C API filter if available and we're filtering all cells
         if self._indices is None:
@@ -432,7 +438,7 @@ class CellCollection:
         Returns:
             New CellCollection with matching cells
         """
-        self._model._rebuild_if_needed()
+        self._model._ensure_sys()
 
         if fill_universe is not None and self._indices is None:
             # Use C API filter
@@ -487,7 +493,7 @@ class CellCollection:
         Returns:
             Cell if found, None otherwise
         """
-        self._model._rebuild_if_needed()
+        self._model._ensure_sys()
 
         if self._indices is None:
             # O(1) lookup via C API
@@ -638,5 +644,136 @@ class TraceResult:
         """Get set of materials encountered."""
         return {seg.material for seg in self._build_segments()}
 
+    def plot(self, ax=None, show_materials: bool = True,
+             by_material: bool = False, show_legend: bool = True,
+             t_max: float = None):
+        """Plot ray path as 1D bar chart.
+
+        Args:
+            ax: Matplotlib axes (creates new if None)
+            show_materials: Color by material
+            by_material: Label bars with material ID instead of cell name/ID
+            show_legend: Show legend mapping colors to materials
+            t_max: Maximum t value to show
+
+        Returns:
+            Matplotlib Axes
+        """
+        from .plotting import plot_ray_path
+        return plot_ray_path(self, ax=ax, show_materials=show_materials,
+                             by_material=by_material, show_legend=show_legend,
+                             t_max=t_max)
+
     def __repr__(self) -> str:
         return f"TraceResult({len(self)} segments)"
+
+
+class VoidResult:
+    """Result of void generation — a collection of axis-aligned bounding boxes
+    covering empty space in the geometry.
+
+    Supports iteration over boxes, merging, and conversion to CSG nodes.
+
+    Example:
+        voids = model.generate_void(bounds=(-10, 10, -10, 10, -10, 10))
+        print(f"Found {len(voids)} void boxes")
+
+        for box in voids:
+            xmin, xmax, ymin, ymax, zmin, zmax = box
+            print(f"  [{xmin:.1f}, {xmax:.1f}] x [{ymin:.1f}, {ymax:.1f}] x [{zmin:.1f}, {zmax:.1f}]")
+
+        # Merge adjacent boxes to reduce count
+        voids.merge()
+    """
+
+    def __init__(self, model: 'Model', c_result):
+        self._model = model
+        self._c_result = c_result
+
+    @property
+    def box_count(self) -> int:
+        """Number of void boxes."""
+        return self._c_result.box_count
+
+    def __len__(self) -> int:
+        return self._c_result.box_count
+
+    def get_box(self, index: int) -> Tuple[float, float, float, float, float, float]:
+        """Get a single void box by index.
+
+        Args:
+            index: Box index (0-based)
+
+        Returns:
+            Tuple (xmin, xmax, ymin, ymax, zmin, zmax)
+        """
+        return self._c_result.get_box(index)
+
+    def get_boxes(self) -> List[Tuple[float, float, float, float, float, float]]:
+        """Get all void boxes.
+
+        Returns:
+            List of (xmin, xmax, ymin, ymax, zmin, zmax) tuples
+        """
+        return self._c_result.get_boxes()
+
+    def merge(self) -> int:
+        """Merge adjacent void boxes to reduce count while balancing complexity.
+
+        Returns:
+            Number of boxes after merging
+        """
+        return self._c_result.merge()
+
+    def add_cells(self) -> int:
+        """Add void boxes as cells to the geometry system.
+
+        Each void box becomes a new cell with material 0 (void).
+        Cells are added directly in the C backend.
+
+        Returns:
+            Number of cells added
+        """
+        return self._c_result.add_cells()
+
+    def add_graveyard(self) -> int:
+        """Add a graveyard cell enclosing the void bounds.
+
+        Creates a sphere that fully encloses the void bounding box
+        and registers a cell outside it with zero importance (kills
+        escaped particles). Must be called after ``add_cells()``.
+
+        Returns:
+            1 on success
+        """
+        return self._c_result.add_graveyard()
+
+    def to_node(self) -> int:
+        """Convert void result to a CSG node (union of boxes).
+
+        Returns:
+            Node ID in the C system
+        """
+        return self._c_result.to_node()
+
+    def total_volume(self) -> float:
+        """Compute total volume of all void boxes.
+
+        Returns:
+            Total void volume in cm^3
+        """
+        total = 0.0
+        for box in self._c_result.get_boxes():
+            xmin, xmax, ymin, ymax, zmin, zmax = box
+            total += (xmax - xmin) * (ymax - ymin) * (zmax - zmin)
+        return total
+
+    def __iter__(self) -> Iterator[Tuple[float, float, float, float, float, float]]:
+        for box in self._c_result.get_boxes():
+            yield box
+
+    def __getitem__(self, index: int) -> Tuple[float, float, float, float, float, float]:
+        return self._c_result.get_box(index)
+
+    def __repr__(self) -> str:
+        return f"VoidResult({self.box_count} boxes)"

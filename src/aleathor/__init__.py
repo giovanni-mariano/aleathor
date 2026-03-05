@@ -74,6 +74,7 @@ from .io import (
     read_mcnp,
     read_mcnp_string,
     read_openmc,
+    read_openmc_string,
     write_mcnp,
     write_openmc,
 )
@@ -83,6 +84,7 @@ from .collections import (
     CellCollection,
     TraceResult,
     TraceSegment,
+    VoidResult,
 )
 
 # Design document API aliases
@@ -216,6 +218,7 @@ __all__ = [
     'read_mcnp',
     'read_mcnp_string',
     'read_openmc',
+    'read_openmc_string',
     'write_mcnp',
     'write_openmc',
     # Collections
@@ -223,6 +226,7 @@ __all__ = [
     'CellCollection',
     'TraceResult',
     'TraceSegment',
+    'VoidResult',
     # Logging
     'LOG_NONE',
     'LOG_ERROR',

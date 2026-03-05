@@ -41,7 +41,7 @@ static PyObject* AleaTHORSystem_export_mcnp(AleaTHORSystemObject* self, PyObject
     int result;
     sighandler_func old_sigint = install_sigint();
     Py_BEGIN_ALLOW_THREADS
-    result = alea_export_mcnp(self->sys, filename);
+    result = mcnp_export_system(self->sys, filename);
     Py_END_ALLOW_THREADS
 
     /* Restore original config */
@@ -73,7 +73,7 @@ static PyObject* AleaTHORSystem_export_openmc(AleaTHORSystemObject* self, PyObje
     int result;
     sighandler_func old_sigint = install_sigint();
     Py_BEGIN_ALLOW_THREADS
-    result = alea_export_openmc(self->sys, filename);
+    result = openmc_export_system(self->sys, filename);
     Py_END_ALLOW_THREADS
     if (restore_sigint(old_sigint)) return NULL;
 

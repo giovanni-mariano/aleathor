@@ -222,12 +222,10 @@ class TestCellMutation:
         cell = simple_model[1]
         assert cell.fill == 8
 
-    def test_mutation_marks_dirty(self, simple_model):
-        """Setting material should mark model dirty."""
-        # Force initial build
-        _ = simple_model[1]
-        simple_model._dirty = False
-
+    def test_mutation_updates_c(self, simple_model):
+        """Setting material should update C backend directly."""
         cell = simple_model[1]
         cell.material = 50
-        assert simple_model._dirty is True
+        # Re-read from C to verify
+        cell2 = simple_model[1]
+        assert cell2.material == 50

@@ -244,7 +244,7 @@ model.cells.by_material(mat_id)   # Filter by material
 model.cells.by_universe(univ_id)  # Filter by universe
 model.cells.by_fill(fill_id)      # Filter by fill
 model.cells.filter(predicate)     # Custom filter
-model.cells.get(cell_id)          # Get by ID
+model.cells[cell_id]              # Get by ID
 model.cells.materials()           # Unique materials
 model.cells.universes()           # Unique universes
 ```

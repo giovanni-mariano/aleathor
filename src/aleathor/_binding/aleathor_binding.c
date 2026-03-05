@@ -20,9 +20,12 @@
 
 /* Public API headers */
 #include "alea.h"
+#include "alea_mcnp.h"
+#include "alea_openmc.h"
 #include "alea_slice.h"
 #include "alea_raycast.h"
 #include "alea_mesh.h"
+#include "alea_void.h"
 
 #include <signal.h>
 
@@ -137,6 +140,29 @@ static int add_lattice_fields(PyObject* dict, const alea_cell_info_t* info) {
             return -1;
     }
 
+    return 0;
+}
+
+/* Helper: add comment fields to an existing cell dict.
+ * Only adds keys when a comment is present to avoid clutter.
+ * Returns 0 on success, -1 on failure (with Python exception set). */
+static int add_comment_fields(PyObject* dict, const alea_cell_info_t* info) {
+    if (info->comments) {
+        PyObject* val = PyUnicode_FromString(info->comments);
+        if (!val) return -1;
+        if (PyDict_SetItemString(dict, "comments", val) < 0) {
+            Py_DECREF(val); return -1;
+        }
+        Py_DECREF(val);
+    }
+    if (info->inline_comment) {
+        PyObject* val = PyUnicode_FromString(info->inline_comment);
+        if (!val) return -1;
+        if (PyDict_SetItemString(dict, "inline_comment", val) < 0) {
+            Py_DECREF(val); return -1;
+        }
+        Py_DECREF(val);
+    }
     return 0;
 }
 
@@ -519,6 +545,18 @@ static PyMethodDef AleaTHORSystem_methods[] = {
     /* Cell fill / ID operations */
     {"set_fill", (PyCFunction)AleaTHORSystem_set_fill, METH_VARARGS,
      "set_fill(cell_index, fill_universe, transform=0)\n\nSet fill universe for a cell."},
+    {"set_comment", (PyCFunction)AleaTHORSystem_set_comment, METH_VARARGS,
+     "set_comment(cell_index, comment)\n\nSet cell comment (None to clear)."},
+    {"set_inline_comment", (PyCFunction)AleaTHORSystem_set_inline_comment, METH_VARARGS,
+     "set_inline_comment(cell_index, comment)\n\nSet cell inline comment (None to clear)."},
+    {"cell_set_material", (PyCFunction)AleaTHORSystem_cell_set_material, METH_VARARGS,
+     "cell_set_material(cell_index, material_index)\n\nSet cell material index (-1 for void)."},
+    {"cell_set_density", (PyCFunction)AleaTHORSystem_cell_set_density, METH_VARARGS,
+     "cell_set_density(cell_index, density)\n\nSet cell density (signed: negative=g/cm3, positive=atoms/b-cm)."},
+    {"cell_set_universe", (PyCFunction)AleaTHORSystem_cell_set_universe, METH_VARARGS,
+     "cell_set_universe(cell_index, universe_id)\n\nSet cell universe membership."},
+    {"cell_remove", (PyCFunction)AleaTHORSystem_cell_remove, METH_VARARGS,
+     "cell_remove(cell_index)\n\nRemove cell by index."},
     {"get_cell_id", (PyCFunction)AleaTHORSystem_get_cell_id, METH_VARARGS,
      "get_cell_id(cell_index) -> int\n\nGet MCNP cell ID from cell index."},
     {"cells_in_universe", (PyCFunction)AleaTHORSystem_cells_in_universe, METH_VARARGS,
@@ -547,6 +585,12 @@ static PyMethodDef AleaTHORSystem_methods[] = {
      "node_sense(node_id) -> int\n\nGet sense for a primitive node (+1 or -1)."},
     {"node_surface_id", (PyCFunction)AleaTHORSystem_node_surface_id, METH_VARARGS,
      "node_surface_id(node_id) -> int\n\nGet MCNP surface ID associated with a primitive node."},
+
+    /* Cell expression */
+    {"cell_expr", (PyCFunction)AleaTHORSystem_cell_expr, METH_VARARGS | METH_KEYWORDS,
+     "cell_expr(cell_index, union_op=':', inter_op=' ', compl_op='#') -> str\n\n"
+     "Get CSG expression string for a cell.\n"
+     "Default operators produce MCNP-style output. Use union_op=' | ', compl_op='~' for OpenMC-style."},
 
     /* Renumbering */
     {"renumber_cells", (PyCFunction)AleaTHORSystem_renumber_cells, METH_VARARGS,

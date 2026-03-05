@@ -185,6 +185,10 @@ static PyObject* AleaTHORSystem_get_cell(AleaTHORSystemObject* self, PyObject* a
         Py_DECREF(dict);
         return NULL;
     }
+    if (add_comment_fields(dict, &info) < 0) {
+        Py_DECREF(dict);
+        return NULL;
+    }
     return dict;
 }
 
@@ -224,6 +228,10 @@ static PyObject* AleaTHORSystem_get_cell_by_index(AleaTHORSystemObject* self, Py
         Py_DECREF(dict);
         return NULL;
     }
+    if (add_comment_fields(dict, &info) < 0) {
+        Py_DECREF(dict);
+        return NULL;
+    }
     return dict;
 }
 
@@ -260,6 +268,11 @@ static PyObject* AleaTHORSystem_get_cells(AleaTHORSystemObject* self, PyObject* 
         }
 
         if (add_lattice_fields(cell_dict, &info) < 0) {
+            Py_DECREF(cell_dict);
+            Py_DECREF(list);
+            return NULL;
+        }
+        if (add_comment_fields(cell_dict, &info) < 0) {
             Py_DECREF(cell_dict);
             Py_DECREF(list);
             return NULL;

@@ -10,7 +10,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Union, Optional
 
-from .model import Model, _CellData as Cell, Material
+from .model import Model, Material
 from .geometry import Region, Halfspace, Intersection, Union as UnionRegion, Complement
 from .surfaces import (
     Surface, Plane, XPlane, YPlane, ZPlane, Sphere,
@@ -49,24 +49,7 @@ def read_mcnp(filename: Union[str, Path]) -> Model:
     # Build model from loaded system
     model = Model(title=path.stem)
     model._sys = sys
-    model._dirty = False
-
-    # Extract cells from C system
-    sys.build_universe_index()
-    cells = sys.get_cells()
-
-    for cell_info in cells:
-        # Create imported region with reference to C system for point queries
-        cell = Cell(
-            id=cell_info['cell_id'],
-            region=_ImportedRegion(sys, cell_info['root_node']),
-            material=cell_info['material_id'],
-            density=cell_info['density'],
-            density_unit="g/cm3" if cell_info.get('is_mass_density', True) else "atoms/b-cm",
-            universe=cell_info['universe_id'],
-            fill=cell_info['fill_universe'] if cell_info['fill_universe'] >= 0 else None,
-        )
-        model._cells[cell.id] = cell
+    _populate_regions(model, sys)
 
     return model
 
@@ -97,24 +80,7 @@ def read_openmc(filename: Union[str, Path]) -> Model:
     # Build model from loaded system
     model = Model(title=path.stem)
     model._sys = sys
-    model._dirty = False
-
-    # Extract cells from C system
-    sys.build_universe_index()
-    cells = sys.get_cells()
-
-    for cell_info in cells:
-        # Create imported region with reference to C system for point queries
-        cell = Cell(
-            id=cell_info['cell_id'],
-            region=_ImportedRegion(sys, cell_info['root_node']),
-            material=cell_info['material_id'],
-            density=cell_info['density'],
-            density_unit="g/cm3" if cell_info.get('is_mass_density', True) else "atoms/b-cm",
-            universe=cell_info['universe_id'],
-            fill=cell_info['fill_universe'] if cell_info['fill_universe'] >= 0 else None,
-        )
-        model._cells[cell.id] = cell
+    _populate_regions(model, sys)
 
     return model
 
@@ -135,24 +101,38 @@ def read_mcnp_string(content: str) -> Model:
 
     model = Model(title="MCNP Model")
     model._sys = sys
-    model._dirty = False
-
-    sys.build_universe_index()
-    cells = sys.get_cells()
-
-    for cell_info in cells:
-        cell = Cell(
-            id=cell_info['cell_id'],
-            region=_ImportedRegion(sys, cell_info['root_node']),
-            material=cell_info['material_id'],
-            density=cell_info['density'],
-            density_unit="g/cm3" if cell_info.get('is_mass_density', True) else "atoms/b-cm",
-            universe=cell_info['universe_id'],
-            fill=cell_info['fill_universe'] if cell_info['fill_universe'] >= 0 else None,
-        )
-        model._cells[cell.id] = cell
+    _populate_regions(model, sys)
 
     return model
+
+
+def read_openmc_string(content: str) -> Model:
+    """Read OpenMC XML input from string and create a Model.
+
+    Args:
+        content: OpenMC XML file contents.
+
+    Returns:
+        Model with loaded geometry.
+    """
+    if _alea is None:
+        raise RuntimeError("C extension not available")
+
+    sys = _alea.load_openmc_string(content)
+
+    model = Model(title="OpenMC Model")
+    model._sys = sys
+    _populate_regions(model, sys)
+
+    return model
+
+
+def _populate_regions(model: Model, sys) -> None:
+    """Extract region metadata from C system into model side-dicts."""
+    sys.build_universe_index()
+    for cell_info in sys.get_cells():
+        cell_id = cell_info['cell_id']
+        model._regions[cell_id] = _ImportedRegion(sys, cell_info['root_node'])
 
 
 def write_mcnp(model: Model, filename: Union[str, Path],

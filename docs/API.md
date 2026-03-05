@@ -49,6 +49,14 @@ ath.read_openmc(filename: str) -> Model
 
 Parse an OpenMC XML geometry file.
 
+### ath.read_openmc_string
+
+```python
+ath.read_openmc_string(content: str) -> Model
+```
+
+Parse OpenMC XML input from a string instead of a file.
+
 ---
 
 ## Model
@@ -469,7 +477,7 @@ Grid-based filled plot with contour lines. The recommended way to visualize geom
 
 ```python
 plot_ray_path(
-    segments: list,
+    trace,  # TraceResult or list of segment dicts
     ax=None,
     show_materials: bool = True,
     t_max: float = None,
@@ -477,6 +485,10 @@ plot_ray_path(
 ```
 
 Plot ray path as a 1D bar chart showing material transitions.
+Accepts a `TraceResult` from `model.trace()`, or a list of raw segment dicts
+(with keys `t_enter`, `t_exit`, `cell_id`, `material_id`).
+
+Also available as `trace.plot()`.
 
 ---
 
@@ -673,6 +685,39 @@ Remove cells whose estimated volume is below threshold. Returns number removed.
 
 ---
 
+## Void Generation
+
+### model.generate_void
+
+```python
+model.generate_void(
+    bounds: Tuple[float, float, float, float, float, float] = None,
+    max_depth: int = 8,
+    min_size: float = 0.1,
+    probes_per_axis: int = 3,
+) -> VoidResult
+```
+
+Find empty space in the geometry using octree decomposition. Identifies axis-aligned bounding boxes covering regions not occupied by any cell. If `bounds` is None, uses the system's automatic bounding box.
+
+### VoidResult
+
+| Property / Method | Returns | Description |
+|---|---|---|
+| `len(voids)` | `int` | Number of void boxes |
+| `voids.box_count` | `int` | Number of void boxes |
+| `voids[i]` | `tuple` | Get box by index `(xmin, xmax, ymin, ymax, zmin, zmax)` |
+| `voids.get_box(i)` | `tuple` | Get box by index |
+| `voids.get_boxes()` | `list[tuple]` | All boxes |
+| `voids.merge()` | `int` | Merge adjacent boxes, returns new count |
+| `voids.add_cells()` | `int` | Add void boxes as cells to system, returns count added |
+| `voids.add_graveyard()` | `int` | Add shell + graveyard cells enclosing void bounds |
+| `voids.to_node()` | `int` | Convert to CSG node (union of boxes) |
+| `voids.total_volume()` | `float` | Sum of all box volumes |
+| `for box in voids` | `tuple` | Iterate over boxes |
+
+---
+
 ## Spatial Indexing
 
 ### model.build_spatial_index
@@ -797,12 +842,20 @@ cell.lattice_lower_left: Optional[Tuple[float, float, float]]  # Lower-left corn
 cell.lattice_dims: Optional[Tuple[int, int, int, int, int, int]]  # (imin,imax,jmin,jmax,kmin,kmax)
 ```
 
+#### Comment Properties
+
+```python
+cell.comments: Optional[str]        # "C" comment lines before the cell (from MCNP)
+cell.inline_comment: Optional[str]  # Inline "$" comment (from MCNP)
+```
+
 ### Methods
 
 ```python
 cell.contains(x: float, y: float, z: float) -> bool
 cell.fill_with(universe, transform: int = 0) -> None
 cell.unfill() -> None
+cell.expr(style: str = "mcnp") -> str  # Get CSG expression string ("mcnp" or "openmc")
 ```
 
 ---
@@ -868,6 +921,14 @@ Total path length through a specific material, or all materials if `material=Non
 result.cells_hit() -> List[Optional[Cell]]
 result.materials_hit() -> Set[int]
 ```
+
+### Plotting
+
+```python
+result.plot(ax=None, show_materials=True, t_max=None) -> Axes
+```
+
+Plot the ray path as a 1D bar chart. Shorthand for `plot_ray_path(result, ...)`.
 
 ---
 

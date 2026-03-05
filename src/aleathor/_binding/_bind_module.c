@@ -19,20 +19,25 @@ static PyObject* mod_load_mcnp(PyObject* self, PyObject* args) {
     const char* filename;
     if (!PyArg_ParseTuple(args, "s", &filename)) return NULL;
 
-    alea_system_t* sys;
+    mcnp_model_t* model;
     sighandler_func old_sigint = install_sigint();
     Py_BEGIN_ALLOW_THREADS
-    sys = alea_load_mcnp(filename);
+    model = mcnp_load(filename);
     Py_END_ALLOW_THREADS
     if (restore_sigint(old_sigint)) {
-        if (sys) alea_destroy(sys);
+        if (model) mcnp_model_destroy(model);
         return NULL;
     }
 
-    if (!sys) {
+    if (!model) {
         PyErr_Format(PyExc_IOError, "Failed to load %s: %s", filename, alea_error());
         return NULL;
     }
+
+    /* Take ownership of the system, then free the model shell */
+    alea_system_t* sys = model->sys;
+    model->owns_sys = 0;
+    mcnp_model_destroy(model);
 
     AleaTHORSystemObject* obj = (AleaTHORSystemObject*)AleaTHORSystemType.tp_alloc(&AleaTHORSystemType, 0);
     if (!obj) {
@@ -50,20 +55,25 @@ static PyObject* mod_load_openmc(PyObject* self, PyObject* args) {
     const char* filename;
     if (!PyArg_ParseTuple(args, "s", &filename)) return NULL;
 
-    alea_system_t* sys;
+    openmc_model_t* model;
     sighandler_func old_sigint = install_sigint();
     Py_BEGIN_ALLOW_THREADS
-    sys = alea_load_openmc(filename);
+    model = openmc_load(filename);
     Py_END_ALLOW_THREADS
     if (restore_sigint(old_sigint)) {
-        if (sys) alea_destroy(sys);
+        if (model) openmc_model_destroy(model);
         return NULL;
     }
 
-    if (!sys) {
+    if (!model) {
         PyErr_Format(PyExc_IOError, "Failed to load %s: %s", filename, alea_error());
         return NULL;
     }
+
+    /* Take ownership of the system, then free the model shell */
+    alea_system_t* sys = model->sys;
+    model->owns_sys = 0;
+    openmc_model_destroy(model);
 
     AleaTHORSystemObject* obj = (AleaTHORSystemObject*)AleaTHORSystemType.tp_alloc(&AleaTHORSystemType, 0);
     if (!obj) {
@@ -83,20 +93,63 @@ static PyObject* mod_load_mcnp_string(PyObject* self, PyObject* args) {
 
     if (!PyArg_ParseTuple(args, "s#", &input, &length)) return NULL;
 
-    alea_system_t* sys;
+    mcnp_model_t* model;
     sighandler_func old_sigint = install_sigint();
     Py_BEGIN_ALLOW_THREADS
-    sys = alea_load_mcnp_string(input, (size_t)length);
+    model = mcnp_load_string(input, (size_t)length);
     Py_END_ALLOW_THREADS
     if (restore_sigint(old_sigint)) {
-        if (sys) alea_destroy(sys);
+        if (model) mcnp_model_destroy(model);
         return NULL;
     }
 
-    if (!sys) {
+    if (!model) {
         PyErr_Format(PyExc_ValueError, "Failed to parse MCNP input: %s", alea_error());
         return NULL;
     }
+
+    /* Take ownership of the system, then free the model shell */
+    alea_system_t* sys = model->sys;
+    model->owns_sys = 0;
+    mcnp_model_destroy(model);
+
+    AleaTHORSystemObject* obj = (AleaTHORSystemObject*)AleaTHORSystemType.tp_alloc(&AleaTHORSystemType, 0);
+    if (!obj) {
+        alea_destroy(sys);
+        return NULL;
+    }
+
+    obj->sys = sys;
+    obj->owns_sys = 1;
+    return (PyObject*)obj;
+}
+
+static PyObject* mod_load_openmc_string(PyObject* self, PyObject* args) {
+    (void)self;
+    const char* input;
+    Py_ssize_t length;
+
+    if (!PyArg_ParseTuple(args, "s#", &input, &length)) return NULL;
+
+    openmc_model_t* model;
+    sighandler_func old_sigint = install_sigint();
+    Py_BEGIN_ALLOW_THREADS
+    model = openmc_load_string(input, (size_t)length);
+    Py_END_ALLOW_THREADS
+    if (restore_sigint(old_sigint)) {
+        if (model) openmc_model_destroy(model);
+        return NULL;
+    }
+
+    if (!model) {
+        PyErr_Format(PyExc_ValueError, "Failed to parse OpenMC input: %s", alea_error());
+        return NULL;
+    }
+
+    /* Take ownership of the system, then free the model shell */
+    alea_system_t* sys = model->sys;
+    model->owns_sys = 0;
+    openmc_model_destroy(model);
 
     AleaTHORSystemObject* obj = (AleaTHORSystemObject*)AleaTHORSystemType.tp_alloc(&AleaTHORSystemType, 0);
     if (!obj) {
@@ -308,8 +361,10 @@ static PyMethodDef mod_methods[] = {
      "load_mcnp_string(input) -> System\n\nLoad MCNP from string."},
     {"load_openmc", mod_load_openmc, METH_VARARGS,
      "load_openmc(filename) -> System\n\nLoad OpenMC XML geometry file."},
+    {"load_openmc_string", mod_load_openmc_string, METH_VARARGS,
+     "load_openmc_string(input) -> System\n\nLoad OpenMC from XML string."},
     {"generate_void", (PyCFunction)mod_generate_void, METH_VARARGS | METH_KEYWORDS,
-     "generate_void(system, bounds=None, max_depth=8, min_size=0.1, samples_per_node=27) -> VoidResult\n\n"
+     "generate_void(system, bounds=None, max_depth=8, min_size=0.1, probes_per_axis=3) -> VoidResult\n\n"
      "Generate void regions using octree algorithm."},
     {"version", mod_version, METH_NOARGS,
      "version() -> str\n\nGet library version string."},

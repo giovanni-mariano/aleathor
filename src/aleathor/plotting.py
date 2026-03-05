@@ -37,16 +37,21 @@ except ImportError:
     HAS_MATPLOTLIB = False
 
 
-def plot_ray_path(segments: list,
+def plot_ray_path(trace,
                   ax: Optional['Axes'] = None,
                   show_materials: bool = True,
+                  by_material: bool = False,
+                  show_legend: bool = True,
                   t_max: float = None) -> 'Axes':
     """Plot ray path through geometry as 1D bar chart.
 
     Args:
-        segments: List of segment dicts from raycast
+        trace: A TraceResult from model.trace(), or a list of segment dicts
+            (with keys 't_enter', 't_exit', 'cell_id', 'material_id').
         ax: Matplotlib axes
         show_materials: Color by material
+        by_material: Label bars with material ID/name instead of cell ID/name
+        show_legend: Show a legend mapping colors to materials
         t_max: Maximum t value to show (clips infinite segments)
 
     Returns:
@@ -58,10 +63,26 @@ def plot_ray_path(segments: list,
     if ax is None:
         fig, ax = plt.subplots(figsize=(10, 2))
 
+    # Accept TraceResult or raw dicts
+    from .collections import TraceResult
+    is_trace_result = isinstance(trace, TraceResult)
+    if is_trace_result:
+        segments = trace._raw_segments
+    else:
+        segments = trace
+
     # Color map for materials
     colors = plt.cm.tab10.colors
 
-    for seg in segments:
+    # Build TraceSegment list once for name lookups
+    trace_segments = None
+    if is_trace_result:
+        trace_segments = trace._build_segments()
+
+    # Track which legend entries we've added (material_id → label)
+    legend_entries = {}
+
+    for i, seg in enumerate(segments):
         t_enter = seg['t_enter']
         t_exit = seg['t_exit']
         cell_id = seg['cell_id']
@@ -77,25 +98,57 @@ def plot_ray_path(segments: list,
 
         if cell_id < 0:
             color = 'lightgray'
-            label = 'void'
+            legend_label = 'void'
+            legend_key = 'void'
         else:
             color = colors[mat_id % len(colors)]
-            label = f'mat {mat_id}'
+            legend_label = f'mat {mat_id}'
+            legend_key = mat_id
+
+        # Only pass label for first occurrence (deduplicated legend)
+        bar_label = legend_label if legend_key not in legend_entries else None
+        legend_entries[legend_key] = legend_label
 
         ax.barh(0, width, left=t_enter, height=0.8, color=color,
-                edgecolor='black', linewidth=0.5)
+                edgecolor='black', linewidth=0.5, label=bar_label)
 
-        # Add cell label
-        if cell_id >= 0 and width > 0.1:
-            ax.text(t_enter + width/2, 0, str(cell_id),
-                   ha='center', va='center', fontsize=8)
+        # Add text label inside bar
+        if width > 0.1:
+            text = _ray_bar_text(
+                cell_id, mat_id, by_material,
+                trace_segments[i] if trace_segments else None,
+            )
+            if text:
+                ax.text(t_enter + width/2, 0, text,
+                        ha='center', va='center', fontsize=8)
 
     ax.set_ylim(-0.5, 0.5)
     ax.set_yticks([])
     ax.set_xlabel('Distance along ray')
     ax.set_title('Ray path through geometry')
 
+    if show_legend and legend_entries:
+        ax.legend(loc='upper right', fontsize=7, ncol=min(len(legend_entries), 5))
+
     return ax
+
+
+def _ray_bar_text(cell_id: int, mat_id: int, by_material: bool,
+                  trace_seg=None) -> Optional[str]:
+    """Build the text label for a ray path bar segment."""
+    if cell_id < 0:
+        return None
+
+    if by_material:
+        return str(mat_id)
+
+    # Prefer cell name when available
+    if trace_seg is not None and trace_seg.cell is not None:
+        name = trace_seg.cell.name
+        if name:
+            return name
+
+    return str(cell_id)
 
 
 def plot_curve(curve: Dict[str, Any], ax: 'Axes', **kwargs) -> None:
@@ -947,7 +1000,7 @@ def plot(model: 'Model',
     if not HAS_MATPLOTLIB:
         raise ImportError("matplotlib is required for plotting. Install with: pip install matplotlib")
 
-    model._rebuild_if_needed()
+    model._ensure_sys()
 
     # Default to z=0 if no plane specified
     if z is None and y is None and x is None and origin is None:
@@ -1047,7 +1100,7 @@ def plot_views(model: 'Model',
     if not HAS_MATPLOTLIB:
         raise ImportError("matplotlib is required for plotting")
 
-    model._rebuild_if_needed()
+    model._ensure_sys()
 
     if bounds is None:
         bounds = (-10, 10, -10, 10, -10, 10)

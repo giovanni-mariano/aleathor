@@ -282,5 +282,32 @@ class Complement(Region):
         return self.region
 
 
+class CNodeRegion(Region):
+    """Region backed by a pre-existing C-level CSG node.
+
+    Used for cells created at the C level (e.g. by void generation)
+    that have no Python surface tree.  The node ID is passed straight
+    through to ``_to_csg`` so the C backend can reuse the existing node
+    without a rebuild.
+    """
+
+    def __init__(self, node_id: int):
+        self._node_id = node_id
+
+    def __contains__(self, point: Tuple[float, float, float]) -> bool:
+        raise NotImplementedError(
+            "CNodeRegion does not support Python-side point queries"
+        )
+
+    def get_surfaces(self) -> Set['Surface']:
+        return set()
+
+    def _to_csg(self, model: 'Model') -> int:
+        return self._node_id
+
+    def __repr__(self) -> str:
+        return f"CNodeRegion(node={self._node_id})"
+
+
 # Avoid circular import
 from .model import Model

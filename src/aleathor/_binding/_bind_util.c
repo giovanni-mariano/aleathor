@@ -133,22 +133,19 @@ static PyObject* AleaTHORSystem_get_config(AleaTHORSystemObject* self, PyObject*
     PyDict_SetItemString(dict, "zero_threshold", PyFloat_FromDouble(cfg.zero_threshold));
     PyDict_SetItemString(dict, "dedup", PyBool_FromLong(cfg.dedup));
     PyDict_SetItemString(dict, "log_level", PyLong_FromLong(cfg.log_level));
-    PyDict_SetItemString(dict, "surface_policy", PyLong_FromLong(cfg.surface_policy));
     PyDict_SetItemString(dict, "export_materials", PyBool_FromLong(cfg.export_materials));
     PyDict_SetItemString(dict, "export_transforms", PyBool_FromLong(cfg.export_transforms));
     PyDict_SetItemString(dict, "universe_depth", PyLong_FromLong(cfg.universe_depth));
     PyDict_SetItemString(dict, "fill_depth", PyLong_FromLong(cfg.fill_depth));
-    PyDict_SetItemString(dict, "trcl_mode", PyLong_FromLong(cfg.trcl_mode));
-    PyDict_SetItemString(dict, "transform_mode", PyLong_FromLong(cfg.transform_mode));
-    PyDict_SetItemString(dict, "mcnp_max_col", PyLong_FromLong(cfg.mcnp_max_col));
-    PyDict_SetItemString(dict, "mcnp_cont_indent", PyLong_FromLong(cfg.mcnp_cont_indent));
     PyDict_SetItemString(dict, "void_max_depth", PyLong_FromLong(cfg.void_max_depth));
     PyDict_SetItemString(dict, "void_min_size", PyFloat_FromDouble(cfg.void_min_size));
-    PyDict_SetItemString(dict, "void_samples", PyLong_FromLong(cfg.void_samples));
+    PyDict_SetItemString(dict, "void_probes_per_axis", PyLong_FromLong(cfg.void_probes_per_axis));
     PyDict_SetItemString(dict, "merge_cell_weight", PyFloat_FromDouble(cfg.merge_cell_weight));
     PyDict_SetItemString(dict, "merge_surface_weight", PyFloat_FromDouble(cfg.merge_surface_weight));
     PyDict_SetItemString(dict, "merge_max_surfaces", PyLong_FromLong(cfg.merge_max_surfaces));
     PyDict_SetItemString(dict, "merge_min_cells", PyLong_FromLong(cfg.merge_min_cells));
+    PyDict_SetItemString(dict, "merge_use_greedy", PyBool_FromLong(cfg.merge_use_greedy));
+    PyDict_SetItemString(dict, "void_consolidate", PyLong_FromLong(cfg.void_consolidate));
     PyDict_SetItemString(dict, "flatten_max_depth", PyLong_FromLong(cfg.flatten_max_depth));
     return dict;
 }
@@ -170,22 +167,19 @@ static PyObject* AleaTHORSystem_set_config(AleaTHORSystemObject* self, PyObject*
     SET_DOUBLE(zero_threshold);
     SET_BOOL(dedup);
     SET_INT(log_level);
-    SET_INT(surface_policy);
     SET_BOOL(export_materials);
     SET_BOOL(export_transforms);
     SET_INT(universe_depth);
     SET_INT(fill_depth);
-    SET_INT(trcl_mode);
-    SET_INT(transform_mode);
-    SET_INT(mcnp_max_col);
-    SET_INT(mcnp_cont_indent);
     SET_INT(void_max_depth);
     SET_DOUBLE(void_min_size);
-    SET_INT(void_samples);
+    SET_INT(void_probes_per_axis);
     SET_DOUBLE(merge_cell_weight);
     SET_DOUBLE(merge_surface_weight);
     SET_INT(merge_max_surfaces);
     SET_INT(merge_min_cells);
+    SET_BOOL(merge_use_greedy);
+    SET_INT(void_consolidate);
     SET_INT(flatten_max_depth);
 
 #undef SET_INT

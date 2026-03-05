@@ -23,7 +23,7 @@ except ImportError:
     _alea = None
 
 # Import collection classes
-from .collections import CellCollection, Cell, TraceResult, TraceSegment
+from .collections import CellCollection, Cell, TraceResult, TraceSegment, VoidResult
 
 
 @dataclass
@@ -145,16 +145,22 @@ class Model:
             title: Model title (used in exports).
         """
         self.title = title
-        self._cells: Dict[int, _CellData] = {}
         self._materials: Dict[int, Material] = {}
         self._universes: Dict[int, Universe] = {}
         self._surfaces: Dict[int, 'Surface'] = {}
+
+        # Python-side metadata (not stored in C)
+        self._names: Dict[int, Optional[str]] = {}       # cell_id -> name
+        self._importances: Dict[int, float] = {}          # cell_id -> importance
+        self._regions: Dict[int, 'Region'] = {}           # cell_id -> Region (optional)
+
+        # Material MCNP ID -> C material index mapping
+        self._material_index_map: Dict[int, int] = {}
 
         # Internal C system (created lazily)
         self._sys = None
         # Cache keyed by (surface_id, positive) since sense is stored on node
         self._halfspace_node_cache: Dict[Tuple[int, bool], int] = {}
-        self._dirty = True  # Track if model needs rebuild
 
     def _ensure_sys(self):
         """Ensure internal C system exists."""
@@ -163,46 +169,18 @@ class Model:
                 raise RuntimeError("C extension not available")
             self._sys = _alea.System()
 
-    def _rebuild_if_needed(self):
-        """Rebuild internal system if dirty."""
-        if not self._dirty:
-            return
+    def _ensure_material(self, material_id: int) -> int:
+        """Ensure a material is registered in the C system.
 
-        self._ensure_sys()
-        self._sys.reset()
-        self._halfspace_node_cache.clear()
-
-        # Register materials in C system and build id→index map
-        material_index_map = {}  # MCNP material_id → C material_index
-        for cell in self._cells.values():
-            mat_id = cell.material
-            if mat_id != 0 and mat_id not in material_index_map:
-                material_index_map[mat_id] = self._sys.add_material(mat_id)
-
-        # Build cells
-        for cell in self._cells.values():
-            node_id = cell.region._to_csg(self)
-            # C expects signed density: negative = g/cm³, positive = atoms/b-cm
-            signed_density = -cell.density if cell.density_unit == "g/cm3" else cell.density
-            mat_index = material_index_map.get(cell.material, -1)  # -1 = void
-            self._sys.add_cell(
-                cell.id, node_id,
-                material_index=mat_index,
-                density=signed_density,
-                universe_id=cell.universe
-            )
-
-        self._sys.build_universe_index()
-
-        # Apply fills from Python Cells (add_cell doesn't pass fill to C)
-        for cell in self._cells.values():
-            if cell.fill is not None:
-                idx = self._sys.cell_find(cell.id)
-                if idx is not None:
-                    transform = cell.fill_transform if cell.fill_transform is not None else 0
-                    self._sys.set_fill(idx, cell.fill, transform)
-
-        self._dirty = False
+        Returns the C material index for the given MCNP material ID.
+        Returns -1 for void (material_id == 0).
+        """
+        if material_id == 0:
+            return -1
+        if material_id not in self._material_index_map:
+            self._ensure_sys()
+            self._material_index_map[material_id] = self._sys.add_material(material_id)
+        return self._material_index_map[material_id]
 
     def _get_or_create_halfspace_node(self, surface: 'Surface', positive: bool) -> int:
         """Get or create a CSG node for a halfspace (surface + sense).
@@ -363,8 +341,10 @@ class Model:
                  material: int = 0, density: float = 0.0,
                  density_unit: str = "g/cm3",
                  name: Optional[str] = None, universe: int = 0,
-                 fill: Optional[int] = None, importance: float = 1.0) -> _CellData:
+                 fill: Optional[int] = None, importance: float = 1.0) -> Cell:
         """Add a cell to the model.
+
+        Pushes the cell to the C backend immediately.
 
         Args:
             region: CSG region defining the cell.
@@ -379,39 +359,54 @@ class Model:
             importance: Particle importance.
 
         Returns:
-            The created _CellData object.
+            Cell wrapper for the created cell.
         """
         if density_unit not in ("g/cm3", "atoms/b-cm"):
             raise ValueError(
                 f"density_unit must be 'g/cm3' or 'atoms/b-cm', got {density_unit!r}"
             )
 
+        self._ensure_sys()
+
+        # Auto-assign cell_id
         if cell_id is None:
-            cell_id = max(self._cells.keys(), default=0) + 1
+            # Use C cell count + existing IDs to find next available
+            existing_ids = set(self._names.keys())
+            for i in range(self._sys.cell_count):
+                existing_ids.add(self._sys.get_cell_id(i))
+            cell_id = max(existing_ids, default=0) + 1
 
-        if cell_id in self._cells:
-            raise ValueError(f"Cell {cell_id} already exists")
+        # Register material in C
+        mat_index = self._ensure_material(material)
 
-        cell = _CellData(
-            id=cell_id,
-            region=region,
-            material=material,
-            density=abs(density),
-            density_unit=density_unit,
-            name=name,
-            universe=universe,
-            fill=fill,
-            importance=importance
+        # Build CSG node from Python Region
+        node_id = region._to_csg(self)
+
+        # Signed density for C
+        signed_density = -abs(density) if density_unit == "g/cm3" else abs(density)
+
+        # Push to C
+        index = self._sys.add_cell(
+            cell_id, node_id,
+            material_index=mat_index,
+            density=signed_density,
+            universe_id=universe
         )
 
-        self._cells[cell_id] = cell
-        self._dirty = True
+        # Apply fill
+        if fill is not None:
+            self._sys.set_fill(index, fill, 0)
+
+        # Store Python-side metadata
+        self._names[cell_id] = name
+        self._importances[cell_id] = importance
+        self._regions[cell_id] = region
 
         # Track surfaces
         for surface in region.get_surfaces():
             self._surfaces[surface.id] = surface
 
-        return cell
+        return Cell(self, index)
 
     def get_cell(self, cell_id: int) -> Cell:
         """Get cell by ID.
@@ -425,7 +420,7 @@ class Model:
         Raises:
             KeyError: If cell not found
         """
-        self._rebuild_if_needed()
+        self._ensure_sys()
         idx = self._sys.cell_find(cell_id)
         if idx is None:
             raise KeyError(f"Cell {cell_id} not found")
@@ -451,18 +446,19 @@ class Model:
 
     def remove_cell(self, cell_id: int) -> None:
         """Remove cell by ID."""
-        if cell_id in self._cells:
-            del self._cells[cell_id]
-            self._dirty = True
+        self._ensure_sys()
+        idx = self._sys.cell_find(cell_id)
+        if idx is not None:
+            self._sys.cell_remove(idx)
+            self._names.pop(cell_id, None)
+            self._importances.pop(cell_id, None)
+            self._regions.pop(cell_id, None)
 
     def update_cell(self, cell_id: int, material: Optional[int] = None,
                     density: Optional[float] = None,
                     density_unit: Optional[str] = None,
                     importance: Optional[float] = None) -> Cell:
-        """Update cell properties.
-
-        Modifies the Python Cell object and marks the model dirty so that
-        the C system is rebuilt on the next query.
+        """Update cell properties directly in the C backend.
 
         Args:
             cell_id: Cell ID to update
@@ -475,30 +471,37 @@ class Model:
             Fresh Cell reflecting the updated cell
 
         Raises:
-            KeyError: If cell not found in Python model
+            KeyError: If cell not found
 
         Example:
             model.update_cell(10, material=2, density=5.0)
         """
-        if cell_id not in self._cells:
+        self._ensure_sys()
+        idx = self._sys.cell_find(cell_id)
+        if idx is None:
             raise KeyError(f"Cell {cell_id} not found")
 
-        cell = self._cells[cell_id]
         if material is not None:
-            cell.material = material
-        if density is not None:
-            cell.density = abs(density)
-        if density_unit is not None:
-            if density_unit not in ("g/cm3", "atoms/b-cm"):
-                raise ValueError(
-                    f"density_unit must be 'g/cm3' or 'atoms/b-cm', got {density_unit!r}"
-                )
-            cell.density_unit = density_unit
+            mat_index = self._ensure_material(material)
+            self._sys.cell_set_material(idx, mat_index)
+        if density is not None or density_unit is not None:
+            # Need current values to compute signed density
+            info = self._sys.get_cell_by_index(idx)
+            d = abs(density) if density is not None else abs(info['density'])
+            if density_unit is not None:
+                if density_unit not in ("g/cm3", "atoms/b-cm"):
+                    raise ValueError(
+                        f"density_unit must be 'g/cm3' or 'atoms/b-cm', got {density_unit!r}"
+                    )
+                is_mass = (density_unit == "g/cm3")
+            else:
+                is_mass = info.get('is_mass_density', True)
+            signed = -d if is_mass else d
+            self._sys.cell_set_density(idx, signed)
         if importance is not None:
-            cell.importance = importance
+            self._importances[cell_id] = importance
 
-        self._dirty = True
-        return self.get_cell(cell_id)
+        return Cell(self, idx)
 
     @property
     def cells(self) -> CellCollection:
@@ -523,7 +526,7 @@ class Model:
             # Count
             len(model.cells)
         """
-        self._rebuild_if_needed()
+        self._ensure_sys()
         return CellCollection(self)
 
     @property
@@ -598,7 +601,7 @@ class Model:
             mix_id = model.create_mixture([1, 2], [0.7, 0.3], name="fuel-clad-mix")
         """
         self._ensure_sys()
-        self._rebuild_if_needed()
+        self._ensure_sys()
         mix_id = self._sys.create_mixture(material_ids, fractions, new_id)
 
         # Track in Python materials dict too
@@ -664,7 +667,7 @@ class Model:
             for cell in cells:
                 print(f"depth={cell.depth}: cell {cell.id}, material {cell.material}")
         """
-        self._rebuild_if_needed()
+        self._ensure_sys()
         hits = self._sys.find_all_cells(x, y, z)
         result = []
         for hit in hits:
@@ -682,7 +685,7 @@ class Model:
         Returns:
             List of (Cell, Cell) tuples for overlapping cells.
         """
-        self._rebuild_if_needed()
+        self._ensure_sys()
         pairs = self._sys.find_overlaps(max_pairs)
         result = []
         for idx1, idx2 in pairs:
@@ -699,7 +702,7 @@ class Model:
         Args:
             filename: Output file path.
         """
-        self._rebuild_if_needed()
+        self._ensure_sys()
         self._sys.export_mcnp(str(filename))
 
     def export_openmc(self, filename: Union[str, Path]) -> None:
@@ -708,7 +711,7 @@ class Model:
         Args:
             filename: Output file path (geometry.xml).
         """
-        self._rebuild_if_needed()
+        self._ensure_sys()
         self._sys.export_openmc(str(filename))
 
     def to_mcnp_string(self) -> str:
@@ -717,7 +720,7 @@ class Model:
         Returns:
             MCNP input file contents.
         """
-        self._rebuild_if_needed()
+        self._ensure_sys()
         # Use temporary file approach for now
         import tempfile
         with tempfile.NamedTemporaryFile(mode='w', suffix='.inp', delete=False) as f:
@@ -750,7 +753,7 @@ class Model:
         Example:
             model.export_mesh("output.msh", nx=50, ny=50, nz=50)
         """
-        self._rebuild_if_needed()
+        self._ensure_sys()
         kwargs = dict(filename=str(filename), nx=nx, ny=ny, nz=nz,
                       format=format, void_material_id=void_material_id,
                       auto_pad=auto_pad)
@@ -780,7 +783,7 @@ class Model:
             result = model.sample_mesh(nx=50, ny=50, nz=50)
             materials = result['material_ids']
         """
-        self._rebuild_if_needed()
+        self._ensure_sys()
         kwargs = dict(nx=nx, ny=ny, nz=nz,
                       void_material_id=void_material_id,
                       auto_pad=auto_pad)
@@ -796,19 +799,19 @@ class Model:
 
     def get_slice_curves_z(self, z: float, bounds: Tuple[float, float, float, float]) -> Dict[str, Any]:
         """Get analytical curves for XY slice at z=constant."""
-        self._rebuild_if_needed()
+        self._ensure_sys()
         x_min, x_max, y_min, y_max = bounds
         return self._sys.get_slice_curves_z(z, x_min, x_max, y_min, y_max)
 
     def get_slice_curves_y(self, y: float, bounds: Tuple[float, float, float, float]) -> Dict[str, Any]:
         """Get analytical curves for XZ slice at y=constant."""
-        self._rebuild_if_needed()
+        self._ensure_sys()
         x_min, x_max, z_min, z_max = bounds
         return self._sys.get_slice_curves_y(y, x_min, x_max, z_min, z_max)
 
     def get_slice_curves_x(self, x: float, bounds: Tuple[float, float, float, float]) -> Dict[str, Any]:
         """Get analytical curves for YZ slice at x=constant."""
-        self._rebuild_if_needed()
+        self._ensure_sys()
         y_min, y_max, z_min, z_max = bounds
         return self._sys.get_slice_curves_x(x, y_min, y_max, z_min, z_max)
 
@@ -817,14 +820,14 @@ class Model:
                          up: Tuple[float, float, float],
                          bounds: Tuple[float, float, float, float]) -> Dict[str, Any]:
         """Get analytical curves for arbitrary plane slice."""
-        self._rebuild_if_needed()
+        self._ensure_sys()
         u_min, u_max, v_min, v_max = bounds
         return self._sys.get_slice_curves(origin, normal, up, u_min, u_max, v_min, v_max)
 
     def find_cells_grid_z(self, z, bounds, resolution=(100, 100),
                           universe_depth=-1, detect_errors=False):
         """Sample cells on a grid for XY slice at z=constant."""
-        self._rebuild_if_needed()
+        self._ensure_sys()
         x_min, x_max, y_min, y_max = bounds
         nx, ny = resolution
         return self._sys.find_cells_grid_z(z, x_min, x_max, y_min, y_max, nx, ny,
@@ -834,7 +837,7 @@ class Model:
     def find_cells_grid_y(self, y, bounds, resolution=(100, 100),
                           universe_depth=-1, detect_errors=False):
         """Sample cells on a grid for XZ slice at y=constant."""
-        self._rebuild_if_needed()
+        self._ensure_sys()
         x_min, x_max, z_min, z_max = bounds
         nx, nz = resolution
         return self._sys.find_cells_grid_y(y, x_min, x_max, z_min, z_max, nx, nz,
@@ -844,7 +847,7 @@ class Model:
     def find_cells_grid_x(self, x, bounds, resolution=(100, 100),
                           universe_depth=-1, detect_errors=False):
         """Sample cells on a grid for YZ slice at x=constant."""
-        self._rebuild_if_needed()
+        self._ensure_sys()
         y_min, y_max, z_min, z_max = bounds
         ny, nz = resolution
         return self._sys.find_cells_grid_x(x, y_min, y_max, z_min, z_max, ny, nz,
@@ -854,7 +857,7 @@ class Model:
     def find_cells_grid(self, origin, normal, up, bounds,
                         resolution=(100, 100), universe_depth=-1, detect_errors=False):
         """Sample cells on a grid for arbitrary plane slice."""
-        self._rebuild_if_needed()
+        self._ensure_sys()
         u_min, u_max, v_min, v_max = bounds
         nu, nv = resolution
         return self._sys.find_cells_grid(origin, normal, up, u_min, u_max, v_min, v_max, nu, nv,
@@ -879,9 +882,12 @@ class Model:
         issues = []
 
         # Check for undefined materials in cells
-        for cell in self._cells.values():
-            if cell.material > 0 and cell.material not in self._materials:
-                issues.append(f"Cell {cell.id} uses undefined material {cell.material}")
+        if self._sys:
+            for i in range(self._sys.cell_count):
+                info = self._sys.get_cell_by_index(i)
+                mat_id = info.get('material_id', 0)
+                if mat_id > 0 and mat_id not in self._materials:
+                    issues.append(f"Cell {info['cell_id']} uses undefined material {mat_id}")
 
         # Check for overlaps
         overlaps = self.find_overlaps()
@@ -889,7 +895,7 @@ class Model:
             issues.append(f"Cells {c1.id} and {c2.id} overlap")
 
         # Check C library validation
-        self._rebuild_if_needed()
+        self._ensure_sys()
         n_issues = self._sys.validate()
         if n_issues > 0:
             issues.append(f"Internal validation found {n_issues} issues")
@@ -911,14 +917,14 @@ class Model:
 
     def __str__(self) -> str:
         """Human-readable string representation."""
-        n_cells = len(self._cells) if self._cells else (self._sys.cell_count if self._sys else 0)
-        n_surfaces = len(self._surfaces) if self._surfaces else (self._sys.surface_count if self._sys else 0)
+        n_cells = self._sys.cell_count if self._sys else 0
+        n_surfaces = self._sys.surface_count if self._sys else len(self._surfaces)
         n_universes = len(self._universes) if self._universes else 0
         return f"Model: {n_cells} cells, {n_surfaces} surfaces, {n_universes} universes"
 
     def __repr__(self) -> str:
-        n_cells = len(self._cells) if self._cells else (self._sys.cell_count if self._sys else 0)
-        n_surfaces = len(self._surfaces) if self._surfaces else (self._sys.surface_count if self._sys else 0)
+        n_cells = self._sys.cell_count if self._sys else 0
+        n_surfaces = self._sys.surface_count if self._sys else len(self._surfaces)
         return f"Model(title='{self.title}', cells={n_cells}, surfaces={n_surfaces})"
 
     # =========================================================================
@@ -943,7 +949,7 @@ class Model:
             model.build_spatial_index()  # Fast slicing now works
             model.plot(z=0, bounds=(-10, 10, -10, 10))
         """
-        self._rebuild_if_needed()
+        self._ensure_sys()
         self._sys.build_spatial_index()
         return self
 
@@ -963,7 +969,7 @@ class Model:
         Args:
             universe_id: Universe ID to flatten
         """
-        self._rebuild_if_needed()
+        self._ensure_sys()
         self._sys.flatten_universe(universe_id)
 
     def simplify(self) -> Dict[str, Any]:
@@ -979,7 +985,7 @@ class Model:
             stats = model.simplify()
             print(f"Reduced {stats['nodes_before']} -> {stats['nodes_after']} nodes")
         """
-        self._rebuild_if_needed()
+        self._ensure_sys()
         return self._sys.flatten_all_cells()
 
     # =========================================================================
@@ -995,7 +1001,7 @@ class Model:
         Returns:
             List of cell indices
         """
-        self._rebuild_if_needed()
+        self._ensure_sys()
         return self._sys.get_cells_by_material(material_id)
 
     def get_cells_by_universe(self, universe_id: int) -> List[int]:
@@ -1007,7 +1013,7 @@ class Model:
         Returns:
             List of cell indices
         """
-        self._rebuild_if_needed()
+        self._ensure_sys()
         return self._sys.get_cells_by_universe(universe_id)
 
     def get_cells_filling_universe(self, universe_id: int) -> List[int]:
@@ -1022,7 +1028,7 @@ class Model:
         Returns:
             List of cell indices
         """
-        self._rebuild_if_needed()
+        self._ensure_sys()
         return self._sys.get_cells_filling_universe(universe_id)
 
     def get_cells_in_bbox(self, bounds: Tuple[float, float, float, float, float, float]) -> List[int]:
@@ -1034,7 +1040,7 @@ class Model:
         Returns:
             List of cell indices
         """
-        self._rebuild_if_needed()
+        self._ensure_sys()
         x_min, x_max, y_min, y_max, z_min, z_max = bounds
         return self._sys.get_cells_in_bbox(x_min, x_max, y_min, y_max, z_min, z_max)
 
@@ -1051,18 +1057,10 @@ class Model:
         Returns:
             New Model with the extracted universe
         """
-        self._rebuild_if_needed()
+        self._ensure_sys()
         new_sys = self._sys.extract_universe(universe_id)
-        new_model = Model.__new__(Model)
-        new_model.title = f"Universe {universe_id}"
+        new_model = Model(title=f"Universe {universe_id}")
         new_model._sys = new_sys
-        new_model._cells = {}
-        new_model._surfaces = {}
-        new_model._materials = {}
-        new_model._universes = {}
-        new_model._next_cell_id = 1
-        new_model._next_surface_id = 1
-        new_model._dirty = False
         return new_model
 
     def extract_region(self, bounds: Tuple[float, float, float, float, float, float]) -> 'Model':
@@ -1074,19 +1072,11 @@ class Model:
         Returns:
             New Model with the extracted cells
         """
-        self._rebuild_if_needed()
+        self._ensure_sys()
         x_min, x_max, y_min, y_max, z_min, z_max = bounds
         new_sys = self._sys.extract_region(x_min, x_max, y_min, y_max, z_min, z_max)
-        new_model = Model.__new__(Model)
-        new_model.title = f"Region [{x_min:.1f},{x_max:.1f}]x[{y_min:.1f},{y_max:.1f}]x[{z_min:.1f},{z_max:.1f}]"
+        new_model = Model(title=f"Region [{x_min:.1f},{x_max:.1f}]x[{y_min:.1f},{y_max:.1f}]x[{z_min:.1f},{z_max:.1f}]")
         new_model._sys = new_sys
-        new_model._cells = {}
-        new_model._surfaces = {}
-        new_model._materials = {}
-        new_model._universes = {}
-        new_model._next_cell_id = 1
-        new_model._next_surface_id = 1
-        new_model._dirty = False
         return new_model
 
     # =========================================================================
@@ -1107,7 +1097,7 @@ class Model:
             if cell:
                 print(f"Point is in cell {cell.id}, material {cell.material}")
         """
-        self._rebuild_if_needed()
+        self._ensure_sys()
         result = self._sys.find_cell(x, y, z)
         if result is None:
             return None
@@ -1152,7 +1142,7 @@ class Model:
             for seg in result:
                 print(f"{seg.cell}: {seg.length} cm")
         """
-        self._rebuild_if_needed()
+        self._ensure_sys()
 
         # Determine origin and direction
         if start is not None and end is not None:
@@ -1232,12 +1222,12 @@ class Model:
 
     def compute_bounding_sphere(self, tolerance=1.0):
         """Compute a tight bounding sphere for the entire model."""
-        self._rebuild_if_needed()
+        self._ensure_sys()
         return self._sys.compute_bounding_sphere(tolerance)
 
     def estimate_cell_volumes(self, n_rays=100000, center=None, radius=None):
         """Estimate cell volumes using random ray tracing."""
-        self._rebuild_if_needed()
+        self._ensure_sys()
         if center is None or radius is None:
             cx, cy, cz, r = self.compute_bounding_sphere()
             if center is None:
@@ -1249,13 +1239,55 @@ class Model:
 
     def estimate_instance_volumes(self, n_rays=100000):
         """Estimate volumes per cell instance (spatial-index aware)."""
-        self._rebuild_if_needed()
+        self._ensure_sys()
         return self._sys.estimate_instance_volumes(n_rays)
 
     def remove_cells_by_volume(self, volumes, threshold):
         """Remove cells whose estimated volume is below a threshold."""
-        self._rebuild_if_needed()
+        self._ensure_sys()
         return self._sys.remove_cells_by_volume(volumes, threshold)
+
+    # =========================================================================
+    # Void Generation
+    # =========================================================================
+
+    def generate_void(self,
+                      bounds: Optional[Tuple[float, float, float, float, float, float]] = None,
+                      max_depth: int = 8,
+                      min_size: float = 0.1,
+                      probes_per_axis: int = 3) -> 'VoidResult':
+        """Find empty space in the geometry using octree decomposition.
+
+        Identifies axis-aligned bounding boxes covering regions not occupied
+        by any cell. Useful for adding void cells to close geometry gaps.
+
+        Args:
+            bounds: Search region (xmin, xmax, ymin, ymax, zmin, zmax).
+                If None, uses the system's automatic bounding box.
+            max_depth: Maximum octree depth (higher = finer boxes).
+            min_size: Minimum box side length.
+            probes_per_axis: Number of probe points per axis per octree node.
+
+        Returns:
+            VoidResult containing the void boxes.
+
+        Example:
+            voids = model.generate_void(bounds=(-10, 10, -10, 10, -10, 10))
+            print(f"Found {len(voids)} void boxes")
+            voids.merge()
+            print(f"After merge: {len(voids)} boxes")
+        """
+        if _alea is None:
+            raise RuntimeError("C extension not available")
+        self._ensure_sys()
+        c_result = _alea.generate_void(
+            self._sys,
+            bounds=bounds,
+            max_depth=max_depth,
+            min_size=min_size,
+            probes_per_axis=probes_per_axis,
+        )
+        return VoidResult(self, c_result)
 
     # =========================================================================
     # Geometry Transforms
@@ -1263,47 +1295,47 @@ class Model:
 
     def renumber_cells(self, start_id=1):
         """Renumber all cells with consecutive IDs."""
-        self._rebuild_if_needed()
+        self._ensure_sys()
         return self._sys.renumber_cells(start_id)
 
     def renumber_surfaces(self, start_id=1):
         """Renumber all surfaces with consecutive IDs."""
-        self._rebuild_if_needed()
+        self._ensure_sys()
         return self._sys.renumber_surfaces(start_id)
 
     def offset_cell_ids(self, offset):
         """Add an offset to all cell IDs."""
-        self._rebuild_if_needed()
+        self._ensure_sys()
         self._sys.offset_cell_ids(offset)
 
     def offset_surface_ids(self, offset):
         """Add an offset to all surface IDs."""
-        self._rebuild_if_needed()
+        self._ensure_sys()
         self._sys.offset_surface_ids(offset)
 
     def offset_material_ids(self, offset):
         """Add an offset to all material IDs."""
-        self._rebuild_if_needed()
+        self._ensure_sys()
         self._sys.offset_material_ids(offset)
 
     def split_union_cells(self):
         """Split cells with top-level unions into multiple simpler cells."""
-        self._rebuild_if_needed()
+        self._ensure_sys()
         return self._sys.split_union_cells()
 
     def expand_macrobodies(self):
         """Expand all macrobodies to primitive surfaces."""
-        self._rebuild_if_needed()
+        self._ensure_sys()
         return self._sys.expand_macrobodies()
 
     def tighten_bboxes(self, tolerance=1.0):
         """Tighten all cell bounding boxes via interval arithmetic."""
-        self._rebuild_if_needed()
+        self._ensure_sys()
         return self._sys.tighten_all_bboxes(tolerance)
 
     def tighten_cell_bbox(self, cell_id, tolerance=1.0):
         """Tighten a single cell's bounding box."""
-        self._rebuild_if_needed()
+        self._ensure_sys()
         idx = self._sys.cell_find(cell_id)
         if idx is None:
             raise KeyError(f"Cell {cell_id} not found")
@@ -1321,7 +1353,7 @@ class Model:
             KeyError: If cell not found
             RuntimeError: On failure
         """
-        self._rebuild_if_needed()
+        self._ensure_sys()
         idx = self._sys.cell_find(cell_id)
         if idx is None:
             raise KeyError(f"Cell {cell_id} not found")
@@ -1363,16 +1395,11 @@ class Model:
 
     def set_fill(self, cell_id, fill_universe, transform=0):
         """Set the fill universe for a cell."""
-        self._rebuild_if_needed()
+        self._ensure_sys()
         idx = self._sys.cell_find(cell_id)
         if idx is None:
             raise KeyError(f"Cell {cell_id} not found")
         self._sys.set_fill(idx, fill_universe, transform)
-        # Keep Python Cell in sync so fills survive rebuild
-        py_cell = self._cells.get(cell_id)
-        if py_cell is not None:
-            py_cell.fill = fill_universe if fill_universe >= 0 else None
-            py_cell.fill_transform = transform
 
     # =========================================================================
     # Comprehensive Overlap Check (delegates to slicing module)

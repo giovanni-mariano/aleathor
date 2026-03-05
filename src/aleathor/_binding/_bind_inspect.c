@@ -98,6 +98,89 @@ static PyObject* AleaTHORSystem_set_fill(AleaTHORSystemObject* self, PyObject* a
 }
 
 /* ============================================================================
+ * AleaTHORSystem Methods - Cell Comments
+ * ============================================================================ */
+
+static PyObject* AleaTHORSystem_set_comment(AleaTHORSystemObject* self, PyObject* args) {
+    int cell_index;
+    const char* comment;
+    if (!PyArg_ParseTuple(args, "iz", &cell_index, &comment)) return NULL;
+    if (!self->sys) { PyErr_SetString(PyExc_RuntimeError, "System not initialized"); return NULL; }
+
+    if (alea_cell_set_comment(self->sys, cell_index, comment) < 0) {
+        PyErr_Format(PyExc_IndexError, "Cell index %d out of range", cell_index);
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+static PyObject* AleaTHORSystem_set_inline_comment(AleaTHORSystemObject* self, PyObject* args) {
+    int cell_index;
+    const char* comment;
+    if (!PyArg_ParseTuple(args, "iz", &cell_index, &comment)) return NULL;
+    if (!self->sys) { PyErr_SetString(PyExc_RuntimeError, "System not initialized"); return NULL; }
+
+    if (alea_cell_set_inline_comment(self->sys, cell_index, comment) < 0) {
+        PyErr_Format(PyExc_IndexError, "Cell index %d out of range", cell_index);
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+/* ============================================================================
+ * AleaTHORSystem Methods - Cell Property Setters
+ * ============================================================================ */
+
+static PyObject* AleaTHORSystem_cell_set_material(AleaTHORSystemObject* self, PyObject* args) {
+    int cell_index, material_index;
+    if (!PyArg_ParseTuple(args, "ii", &cell_index, &material_index)) return NULL;
+    if (!self->sys) { PyErr_SetString(PyExc_RuntimeError, "System not initialized"); return NULL; }
+
+    if (alea_cell_set_material(self->sys, cell_index, material_index) < 0) {
+        PyErr_Format(PyExc_IndexError, "Cell index %d out of range", cell_index);
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+static PyObject* AleaTHORSystem_cell_set_density(AleaTHORSystemObject* self, PyObject* args) {
+    int cell_index;
+    double density;
+    if (!PyArg_ParseTuple(args, "id", &cell_index, &density)) return NULL;
+    if (!self->sys) { PyErr_SetString(PyExc_RuntimeError, "System not initialized"); return NULL; }
+
+    if (alea_cell_set_density(self->sys, cell_index, density) < 0) {
+        PyErr_Format(PyExc_IndexError, "Cell index %d out of range", cell_index);
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+static PyObject* AleaTHORSystem_cell_set_universe(AleaTHORSystemObject* self, PyObject* args) {
+    int cell_index, universe_id;
+    if (!PyArg_ParseTuple(args, "ii", &cell_index, &universe_id)) return NULL;
+    if (!self->sys) { PyErr_SetString(PyExc_RuntimeError, "System not initialized"); return NULL; }
+
+    if (alea_cell_set_universe(self->sys, cell_index, universe_id) < 0) {
+        PyErr_Format(PyExc_IndexError, "Cell index %d out of range", cell_index);
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+static PyObject* AleaTHORSystem_cell_remove(AleaTHORSystemObject* self, PyObject* args) {
+    int cell_index;
+    if (!PyArg_ParseTuple(args, "i", &cell_index)) return NULL;
+    if (!self->sys) { PyErr_SetString(PyExc_RuntimeError, "System not initialized"); return NULL; }
+
+    if (alea_cell_remove(self->sys, cell_index) < 0) {
+        PyErr_Format(PyExc_IndexError, "Cell index %d out of range", cell_index);
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+/* ============================================================================
  * AleaTHORSystem Methods - Cell/Surface/Node Info
  * ============================================================================ */
 
@@ -548,6 +631,38 @@ static PyObject* AleaTHORSystem_node_primitive_data(AleaTHORSystemObject* self, 
     default:
         return Py_BuildValue("{s:i}", "type", (int)ptype);
     }
+}
+
+/* ============================================================================
+ * AleaTHORSystem Methods - Cell Expression
+ * ============================================================================ */
+
+static PyObject* AleaTHORSystem_cell_expr(AleaTHORSystemObject* self, PyObject* args, PyObject* kwds) {
+    size_t cell_index;
+    const char* union_op = ":";
+    const char* inter_op = " ";
+    const char* compl_op = "#";
+    static char* kwlist[] = {"cell_index", "union_op", "inter_op", "compl_op", NULL};
+
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "n|sss", kwlist,
+            &cell_index, &union_op, &inter_op, &compl_op)) {
+        return NULL;
+    }
+
+    if (!self->sys) {
+        PyErr_SetString(PyExc_RuntimeError, "System not initialized");
+        return NULL;
+    }
+
+    char* expr = alea_cell_expr(self->sys, cell_index, union_op, inter_op, compl_op);
+    if (!expr) {
+        PyErr_Format(PyExc_IndexError, "Cell index %zu out of range", cell_index);
+        return NULL;
+    }
+
+    PyObject* result = PyUnicode_FromString(expr);
+    free(expr);
+    return result;
 }
 
 static PyObject* AleaTHORSystem_node_tree(AleaTHORSystemObject* self, PyObject* args) {

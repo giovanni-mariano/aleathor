@@ -21,7 +21,7 @@ typedef struct {
 
 static void AleaTHORVoidResult_dealloc(AleaTHORVoidResultObject* self) {
     if (self->result) {
-        alea_void_free(self->result);
+        alea_void_result_destroy(self->result);
     }
     Py_XDECREF(self->sys_ref);
     Py_TYPE(self)->tp_free((PyObject*)self);
@@ -33,7 +33,7 @@ static PyObject* AleaTHORVoidResult_get_box_count(AleaTHORVoidResultObject* self
         PyErr_SetString(PyExc_RuntimeError, "Result not initialized");
         return NULL;
     }
-    return PyLong_FromSize_t(alea_void_count(self->result));
+    return PyLong_FromSize_t(alea_void_box_count(self->result));
 }
 
 static PyObject* AleaTHORVoidResult_get_box(AleaTHORVoidResultObject* self, PyObject* args) {
@@ -46,7 +46,7 @@ static PyObject* AleaTHORVoidResult_get_box(AleaTHORVoidResultObject* self, PyOb
     }
 
     alea_bbox_t box;
-    if (alea_void_get(self->result, index, &box) < 0) {
+    if (alea_void_box_get(self->result, index, &box) < 0) {
         PyErr_Format(PyExc_IndexError, "Box index %zu out of range", index);
         return NULL;
     }
@@ -63,13 +63,13 @@ static PyObject* AleaTHORVoidResult_get_boxes(AleaTHORVoidResultObject* self, Py
         return NULL;
     }
 
-    size_t count = alea_void_count(self->result);
+    size_t count = alea_void_box_count(self->result);
     PyObject* list = PyList_New(count);
     if (!list) return NULL;
 
     for (size_t i = 0; i < count; i++) {
         alea_bbox_t box;
-        if (alea_void_get(self->result, i, &box) < 0) {
+        if (alea_void_box_get(self->result, i, &box) < 0) {
             Py_DECREF(list);
             PyErr_SetString(PyExc_RuntimeError, "Failed to get box");
             return NULL;
@@ -110,7 +110,35 @@ static PyObject* AleaTHORVoidResult_merge(AleaTHORVoidResultObject* self, PyObje
         return NULL;
     }
 
-    int result = alea_void_merge(self->sys_ref->sys, self->result);
+    int result = alea_merge_void_cells(self->sys_ref->sys, self->result, NULL);
+    if (result < 0) {
+        PyErr_SetString(PyExc_RuntimeError, alea_error());
+        return NULL;
+    }
+    return PyLong_FromLong(result);
+}
+
+static PyObject* AleaTHORVoidResult_add_cells(AleaTHORVoidResultObject* self, PyObject* Py_UNUSED(ignored)) {
+    if (!self->result || !self->sys_ref || !self->sys_ref->sys) {
+        PyErr_SetString(PyExc_RuntimeError, "Result or system not initialized");
+        return NULL;
+    }
+
+    int added = alea_void_add_cells(self->sys_ref->sys, self->result);
+    if (added < 0) {
+        PyErr_SetString(PyExc_RuntimeError, alea_error());
+        return NULL;
+    }
+    return PyLong_FromLong(added);
+}
+
+static PyObject* AleaTHORVoidResult_add_graveyard(AleaTHORVoidResultObject* self, PyObject* Py_UNUSED(ignored)) {
+    if (!self->result || !self->sys_ref || !self->sys_ref->sys) {
+        PyErr_SetString(PyExc_RuntimeError, "Result or system not initialized");
+        return NULL;
+    }
+
+    int result = alea_void_add_graveyard(self->sys_ref->sys, self->result);
     if (result < 0) {
         PyErr_SetString(PyExc_RuntimeError, alea_error());
         return NULL;
@@ -132,6 +160,10 @@ static PyMethodDef AleaTHORVoidResult_methods[] = {
      "to_node() -> node_id\n\nConvert void result to CSG node (union of boxes)."},
     {"merge", (PyCFunction)AleaTHORVoidResult_merge, METH_NOARGS,
      "merge() -> int\n\nMerge void cells to reduce count while balancing complexity."},
+    {"add_cells", (PyCFunction)AleaTHORVoidResult_add_cells, METH_NOARGS,
+     "add_cells() -> int\n\nAdd void boxes as cells to the system. Returns number added."},
+    {"add_graveyard", (PyCFunction)AleaTHORVoidResult_add_graveyard, METH_NOARGS,
+     "add_graveyard() -> int\n\nAdd a graveyard cell (sphere + outside) enclosing the void bounds."},
     {NULL}
 };
 
@@ -153,12 +185,12 @@ static PyObject* mod_generate_void(PyObject* self, PyObject* args, PyObject* kwd
     PyObject* bounds_obj = Py_None;
     int max_depth = 8;
     double min_size = 0.1;
-    int samples_per_node = 27;
-    static char* kwlist[] = {"system", "bounds", "max_depth", "min_size", "samples_per_node", NULL};
+    int probes_per_axis = 3;
+    static char* kwlist[] = {"system", "bounds", "max_depth", "min_size", "probes_per_axis", NULL};
 
     if (!PyArg_ParseTupleAndKeywords(args, kwds, "O!|Oidi", kwlist,
                                      &AleaTHORSystemType, &sys_obj,
-                                     &bounds_obj, &max_depth, &min_size, &samples_per_node)) {
+                                     &bounds_obj, &max_depth, &min_size, &probes_per_axis)) {
         return NULL;
     }
 
@@ -191,7 +223,7 @@ static PyObject* mod_generate_void(PyObject* self, PyObject* args, PyObject* kwd
     alea_config_t cfg = orig_cfg;
     cfg.void_max_depth = max_depth;
     cfg.void_min_size = min_size;
-    cfg.void_samples = samples_per_node;
+    cfg.void_probes_per_axis = probes_per_axis;
     alea_set_config(sys_obj->sys, &cfg);
 
     void_result_t* result;
@@ -204,7 +236,7 @@ static PyObject* mod_generate_void(PyObject* self, PyObject* args, PyObject* kwd
     alea_set_config(sys_obj->sys, &orig_cfg);
 
     if (restore_sigint(old_sigint)) {
-        if (result) alea_void_free(result);
+        if (result) alea_void_result_destroy(result);
         return NULL;
     }
 
@@ -216,7 +248,7 @@ static PyObject* mod_generate_void(PyObject* self, PyObject* args, PyObject* kwd
     /* Create Python object */
     AleaTHORVoidResultObject* obj = PyObject_New(AleaTHORVoidResultObject, &AleaTHORVoidResultType);
     if (!obj) {
-        alea_void_free(result);
+        alea_void_result_destroy(result);
         return NULL;
     }
 

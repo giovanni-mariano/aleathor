@@ -120,7 +120,7 @@ for pt in test_points:
         print(f"  {pt} -> void (outside geometry)")
 
 # Check if specific cell contains a point
-fuel_cell = model.cells.get(1)
+fuel_cell = model.cells[1]
 print(f"\nfuel_cell.contains(0, 0, 0) = {fuel_cell.contains(0, 0, 0)}")
 print(f"fuel_cell.contains(0.5, 0, 0) = {fuel_cell.contains(0.5, 0, 0)}")
 

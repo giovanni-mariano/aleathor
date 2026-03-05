@@ -31,7 +31,7 @@ class BuildExtWithLibrary(build_ext):
         vendor = root / "csrc/libalea"
 
         # Build command: always RELEASE=1, optionally USE_OPENMP=1
-        make_args = ["make", "lib", "RELEASE=1"]
+        make_args = ["make", "full", "RELEASE=1"]
 
         # Default to portable builds (safe for pip installs);
         # users who want -march=native can set PORTABLE=0
@@ -92,7 +92,7 @@ def get_extension():
     return Extension(
         name="_alea",
         sources=["src/aleathor/_binding/aleathor_binding.c"],
-        include_dirs=["csrc/libalea/include"],
+        include_dirs=["csrc/libalea/include", "csrc/libalea/src/core"],
         library_dirs=["csrc/libalea/bin"],
         # Use the combined full library (core + all modules).
         # --whole-archive / -force_load is needed so the linker pulls in ALL
