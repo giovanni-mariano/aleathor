@@ -4,7 +4,7 @@
 # SPDX-License-Identifier: MPL-2.0
 
 """
-Plotting example for AleaTHOR CSG library.
+Plotting example for aleathor CSG library.
 
 This example demonstrates the visualization capabilities:
 - 2D slice plots (XY, XZ, YZ planes)

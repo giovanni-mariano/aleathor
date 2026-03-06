@@ -4,7 +4,7 @@
 
 /**
  * @file _alea_module.c
- * @brief Python C extension for AleaTHOR-CSG library
+ * @brief Python C extension for aleathor CSG library
  *
  * Uses ONLY the public API from alea.h (alea_* functions).
  *

@@ -6,7 +6,7 @@ SPDX-License-Identifier: MPL-2.0
 
 # Tutorial
 
-This tutorial walks through the main things you can do with AleaTHOR. Each section is self-contained: real code, real results, no hand-waving.
+This tutorial walks through the main things you can do with aleathor. Each section is self-contained: real code, real results, no hand-waving.
 
 All examples assume:
 
@@ -128,7 +128,7 @@ Individual cells are `Cell` objects with these properties: `id`, `material`, `de
 
 ## 4. Visualizing the Geometry
 
-AleaTHOR provides two complementary approaches to 2D visualization:
+aleathor provides two complementary approaches to 2D visualization:
 
 1. **Grid queries**: sample cell/material IDs on a pixel grid (fast, gives you colors)
 2. **Analytical curves**: extract exact surface boundaries (lines, circles, ellipses — gives you contours)
@@ -516,7 +516,7 @@ model.tighten_bbox_numerical(cell_id=42)
 
 ## 9. Mesh Export
 
-AleaTHOR can export the geometry as a structured hexahedral mesh, suitable for visualization in Gmsh or ParaView:
+aleathor can export the geometry as a structured hexahedral mesh, suitable for visualization in Gmsh or ParaView:
 
 ```python
 # Export as Gmsh mesh

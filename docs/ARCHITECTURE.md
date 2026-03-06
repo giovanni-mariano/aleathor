@@ -6,11 +6,11 @@ SPDX-License-Identifier: MPL-2.0
 
 # Architecture
 
-This document explains how the AleaTHOR Python package works internally. Read this if you want to contribute, understand the design decisions, or debug issues at the boundary between Python and C.
+This document explains how the aleathor Python package works internally. Read this if you want to contribute, understand the design decisions, or debug issues at the boundary between Python and C.
 
 ## The Big Picture
 
-AleaTHOR Python is a thin layer over a C geometry engine ([libalea](../csrc/libalea/)). The package structure:
+aleathor Python is a thin layer over a C geometry engine ([libalea](../csrc/libalea/)). The package structure:
 
 ```
 src/aleathor/

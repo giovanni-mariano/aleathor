@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Advanced surfaces example for AleaTHOR CSG library.
+Advanced surfaces example for aleathor CSG library.
 
 This example demonstrates the various surface types available:
 - Basic surfaces: Plane, Sphere, Cylinder, Cone
@@ -25,7 +25,7 @@ from aleathor.surfaces import (
 )
 
 print("=" * 60)
-print("AleaTHOR Surface Types Demo")
+print("aleathor Surface Types Demo")
 print("=" * 60)
 
 # =============================================================================

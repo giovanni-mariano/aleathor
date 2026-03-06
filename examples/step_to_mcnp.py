@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """
-STEP to MCNP conversion example using OCP (OpenCascade) and AleaTHOR.
+STEP to MCNP conversion example using OCP (OpenCascade) and aleathor.
 
 This example demonstrates how to:
 1. Load a STEP file using OCP's STEPControl_Reader
 2. Analyze the B-Rep geometry to extract primitive surfaces
-3. Map recognized shapes to AleaTHOR CSG surfaces
-4. Build an AleaTHOR model and export to MCNP format
+3. Map recognized shapes to aleathor CSG surfaces
+4. Build an aleathor model and export to MCNP format
 
 Requirements:
     pip install cadquery-ocp aleathor   (or any OCP distribution)
@@ -153,7 +153,7 @@ def _surface_info(face):
 
 
 def _make_aleathor_surface(info, name=None):
-    """Convert a surface info dict to an AleaTHOR Surface object.
+    """Convert a surface info dict to an aleathor Surface object.
 
     Returns None if the surface geometry cannot be represented in MCNP CSG.
     """
@@ -311,7 +311,7 @@ def _classify_solid(solid):
 
 def step_to_model(step_path, title="STEP Import", default_material=1,
                   default_density=1.0):
-    """Convert a STEP file to an AleaTHOR Model.
+    """Convert a STEP file to an aleathor Model.
 
     Each solid in the STEP file becomes a cell in the model. Recognized
     primitive shapes (boxes, cylinders, spheres) are converted to MCNP
@@ -528,7 +528,7 @@ def main():
         step_path = Path(tempfile.gettempdir()) / "shielding_sample.step"
         create_sample_step(step_path)
 
-    # ---- Convert STEP -> AleaTHOR Model ----
+    # ---- Convert STEP -> aleathor Model ----
     model, bounds = step_to_model(
         step_path,
         title="Shielding Assembly from STEP",

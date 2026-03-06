@@ -6,13 +6,13 @@ SPDX-License-Identifier: MPL-2.0
 
 # Concepts
 
-This document explains the domain concepts that AleaTHOR works with. If you know MCNP, most of this will be familiar, but there are a few places where AleaTHOR's Python representation differs from the underlying C library or from what you might expect.
+This document explains the domain concepts that aleathor works with. If you know MCNP, most of this will be familiar, but there are a few places where aleathor's Python representation differs from the underlying C library or from what you might expect.
 
 ## Surfaces
 
 A surface is a mathematical object that divides all of 3D space into two halves. A plane divides space into "above" and "below." A sphere divides space into "inside" and "outside."
 
-In AleaTHOR, a surface is always one of these types:
+In aleathor, a surface is always one of these types:
 
 | Class | Equation | MCNP equivalent |
 |-------|----------|-----------------|
@@ -37,7 +37,7 @@ print(s.id)  # Auto-assigned integer
 
 ## Sense and Halfspaces
 
-Every surface divides space into two sides. In AleaTHOR (and MCNP), these sides are called **positive** and **negative** sense.
+Every surface divides space into two sides. In aleathor (and MCNP), these sides are called **positive** and **negative** sense.
 
 - **Negative sense** (inside): for a sphere, points closer to the center than the radius. For a plane, points on the side opposite to the normal vector. Written as `-S` in MCNP.
 - **Positive sense** (outside): for a sphere, points farther from the center. Written as `+S` or just `S` in MCNP.
@@ -62,7 +62,7 @@ outside = sphere.exterior()  # Same as +sphere
 
 A `Region` defines a volume of space. The simplest region is a `Halfspace` (one side of a surface). Complex regions are built by combining halfspaces with boolean operations.
 
-AleaTHOR uses Python operators for boolean combinations:
+aleathor uses Python operators for boolean combinations:
 
 | Operation | Python | MCNP | Meaning |
 |-----------|--------|------|---------|
@@ -138,7 +138,7 @@ cell = model.add_cell(
 
 ### _CellData vs Cell
 
-AleaTHOR has two cell representations:
+aleathor has two cell representations:
 
 | Type | Purpose | Source |
 |------|---------|--------|
@@ -181,7 +181,7 @@ Universes become important when you have repeated geometry. Instead of defining 
 
 ### Fills
 
-A cell with `fill=N` is a container. When AleaTHOR evaluates a point query, it:
+A cell with `fill=N` is a container. When aleathor evaluates a point query, it:
 
 1. Finds the container cell in the current universe
 2. Sees it has a fill
@@ -189,7 +189,7 @@ A cell with `fill=N` is a container. When AleaTHOR evaluates a point query, it:
 4. Searches for the point among the cells of universe N
 5. Repeats if it hits another fill
 
-This is recursive. AleaTHOR handles arbitrary nesting depth.
+This is recursive. aleathor handles arbitrary nesting depth.
 
 ```python
 # Define pin geometry in universe 1
@@ -221,7 +221,7 @@ for cell in model.cells:
         print(f"  Lower-left: {cell.lattice_lower_left}")
 ```
 
-When AleaTHOR evaluates a point inside a lattice cell, it determines which lattice element the point falls in (based on pitch and lower-left corner), looks up the universe for that element in the fill array, and searches for the point among that universe's cells.
+When aleathor evaluates a point inside a lattice cell, it determines which lattice element the point falls in (based on pitch and lower-left corner), looks up the universe for that element in the fill array, and searches for the point among that universe's cells.
 
 ### set_fill
 
@@ -235,14 +235,14 @@ This operates on the C system directly and takes effect immediately (no rebuild 
 
 ## Materials
 
-A material is a composition of nuclides or elements. AleaTHOR stores:
+A material is a composition of nuclides or elements. aleathor stores:
 
 - **Material ID**: the MCNP material number
 - **Name**: optional human-readable name
 - **Density**: stored on the cell, not the material
 - **Composition**: optional nuclide fractions
 
-Materials are preserved through loading and export. AleaTHOR doesn't do physics with materials — it carries them along so queries return the correct material number and exports produce valid input files.
+Materials are preserved through loading and export. aleathor doesn't do physics with materials — it carries them along so queries return the correct material number and exports produce valid input files.
 
 ```python
 model.add_material(1, name="UO2", density=-10.5)
@@ -338,7 +338,7 @@ Key configuration fields:
 
 ## Error Handling
 
-AleaTHOR functions raise standard Python exceptions:
+aleathor functions raise standard Python exceptions:
 
 | Exception | When |
 |-----------|------|

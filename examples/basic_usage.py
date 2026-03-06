@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Basic usage example for AleaTHOR CSG library.
+Basic usage example for aleathor CSG library.
 
 This example demonstrates how to:
 1. Create geometry using Python surface objects

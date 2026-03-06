@@ -6,7 +6,7 @@ SPDX-License-Identifier: MPL-2.0
 
 # API Reference
 
-Every public class, method, and function in AleaTHOR, grouped by what you're trying to do.
+Every public class, method, and function in aleathor, grouped by what you're trying to do.
 
 **Conventions**:
 - All geometry operations require the C extension (`_alea`). If not installed, `RuntimeError` is raised.
@@ -64,7 +64,7 @@ Parse OpenMC XML input from a string instead of a file.
 ### Constructor
 
 ```python
-Model(title: str = "AleaTHOR Model")
+Model(title: str = "aleathor Model")
 ```
 
 Create an empty model. Cells, materials, and surfaces are added programmatically.

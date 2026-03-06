@@ -247,7 +247,7 @@ class Model:
         model.export_mcnp("geometry.inp")
     """
 
-    def __init__(self, title: str = "AleaTHOR Model"):
+    def __init__(self, title: str = "aleathor Model"):
         """
         Args:
             title: Model title (used in exports).

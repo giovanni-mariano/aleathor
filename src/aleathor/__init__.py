@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: MPL-2.0
 
 """
-AleaTHOR: Constructive Solid Geometry for Nuclear Simulations
+aleathor: Constructive Solid Geometry for Nuclear Simulations
 
 A Python package for building, manipulating, and exporting CSG geometries
 compatible with MCNP and OpenMC.

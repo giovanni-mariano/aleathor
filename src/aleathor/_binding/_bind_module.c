@@ -401,8 +401,8 @@ static void mod_module_free(void* module) {
 static struct PyModuleDef mod_module = {
     PyModuleDef_HEAD_INIT,
     .m_name = "_alea",
-    .m_doc = PyDoc_STR("AleaTHOR-CSG: Constructive Solid Geometry library for nuclear simulations.\n\n"
-                       "This module provides Python bindings for the AleaTHOR-CSG library,\n"
+    .m_doc = PyDoc_STR("aleathor: Constructive Solid Geometry library for nuclear simulations.\n\n"
+                       "This module provides Python bindings for the aleathor CSG library,\n"
                        "which parses MCNP input files and provides CSG tree operations.\n\n"
                        "Logging is automatically routed to Python's logging module (logger: 'aleathor')."),
     .m_size = 0,  /* Use 0 instead of -1 to enable m_free */
