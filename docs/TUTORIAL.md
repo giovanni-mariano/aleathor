@@ -561,19 +561,12 @@ for cell in model.cells:
 
 ## 11. Working with Large Models
 
-For models with deep universe hierarchies (tokamak-scale), build the spatial index before slicing:
+For models with deep universe hierarchies (tokamak-scale), the query acceleration caches (universe index, spatial index, surface BVH, raycast adjacency) are built automatically on the first query. The first slice or trace pays the setup cost; subsequent queries reuse the caches.
 
 ```python
 model = ath.load("iter_full.inp")
-model.build_spatial_index()
+model.plot(z=0, bounds=(-1000, 1000, -1000, 1000))  # first call builds caches
 
-# Now slicing and plotting work efficiently
-model.plot(z=0, bounds=(-1000, 1000, -1000, 1000))
-```
-
-The spatial index builds a KD-tree over cell instances. Without it, queries scan cells linearly. With it, queries touch only the handful of cells whose bounding boxes contain the query point.
-
-```python
 # Check how many instances the index covers
 print(f"Cell instances: {model.spatial_index_instance_count}")
 ```

@@ -125,32 +125,8 @@ def find_label_positions(
     nu, nv = _extract_slice_params(grid_result)[:2]
     key = 'material_ids' if by_material else 'cell_ids'
     ids = grid_result[key]
-
-    # Accumulate pixel positions per ID
-    accum: Dict[int, List[Tuple[int, int]]] = defaultdict(list)
-    for idx, region_id in enumerate(ids):
-        if region_id < 0:
-            continue  # skip void / undefined / overlap
-        col = idx % nu
-        row = idx // nu
-        accum[region_id].append((col, row))
-
-    labels = []
-    for region_id, pixels in accum.items():
-        if len(pixels) < min_pixels:
-            continue
-        # Centroid
-        sum_x = sum(p[0] for p in pixels)
-        sum_y = sum(p[1] for p in pixels)
-        n = len(pixels)
-        labels.append({
-            'id': region_id,
-            'px': sum_x // n,
-            'py': sum_y // n,
-            'pixel_count': n,
-        })
-
-    return labels
+    model._ensure_sys()
+    return model._sys.find_label_positions(list(ids), nu, nv, min_pixels)
 
 
 def find_surface_label_positions(
@@ -160,61 +136,27 @@ def find_surface_label_positions(
 ) -> List[Dict[str, Any]]:
     """Find label positions for surfaces visible in a grid slice.
 
-    Detects boundary pixels (where adjacent cells differ) and groups them
-    by surface.  Returns one label per surface, positioned at the centroid
-    of the boundary pixels, inset by *margin* from the grid edges.
+    Delegates to libalea's ``alea_find_surface_label_positions``, which walks
+    the analytical slice curves and returns one label per unique surface.
 
     Args:
-        model: The Model (unused currently, reserved for future use).
+        model: The Model (used to access the underlying system).
         grid_result: Dict returned by find_cells_grid_z/y/x or find_cells_grid.
         margin: Minimum distance (in pixels) from grid edge for labels.
 
     Returns:
         List of dicts, each with:
-            'surface_id': int
+            'id': surface ID
             'px': horizontal pixel coordinate
             'py': vertical pixel coordinate
     """
-    nu, nv = _extract_slice_params(grid_result)[:2]
-    cell_ids = grid_result['cell_ids']
-
-    # Find boundary pixels: positions where neighbouring cell IDs differ.
-    # Collect (col, row) for each unique boundary pair.
-    boundary_pixels: List[Tuple[int, int]] = []
-    for row in range(nv):
-        for col in range(nu):
-            idx = row * nu + col
-            cid = cell_ids[idx]
-            is_boundary = False
-            # Check right neighbour
-            if col + 1 < nu and cell_ids[idx + 1] != cid:
-                is_boundary = True
-            # Check bottom neighbour
-            if row + 1 < nv and cell_ids[idx + nu] != cid:
-                is_boundary = True
-            if is_boundary:
-                # Skip if too close to the edge
-                if col < margin or col >= nu - margin:
-                    continue
-                if row < margin or row >= nv - margin:
-                    continue
-                boundary_pixels.append((col, row))
-
-    if not boundary_pixels:
-        return []
-
-    # Return a single label at the centroid of all boundary pixels.
-    # (A per-surface breakdown would require knowing which surface each
-    # boundary corresponds to; that information is not in the grid dict.
-    # For now, return one entry per contiguous boundary segment.)
-    sum_x = sum(p[0] for p in boundary_pixels)
-    sum_y = sum(p[1] for p in boundary_pixels)
-    n = len(boundary_pixels)
-    return [{
-        'surface_id': 0,
-        'px': sum_x // n,
-        'py': sum_y // n,
-    }]
+    nu, nv, origin, normal, up, u_min, u_max, v_min, v_max = \
+        _extract_slice_params(grid_result)
+    model._ensure_sys()
+    return model._sys.find_surface_label_positions(
+        origin, normal, up, u_min, u_max, v_min, v_max,
+        nu, nv, margin,
+    )
 
 
 # =========================================================================

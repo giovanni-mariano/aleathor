@@ -29,12 +29,25 @@ except ImportError:
     np = None
 
 try:
+    import matplotlib
     import matplotlib.pyplot as plt
     from matplotlib.figure import Figure
     from matplotlib.axes import Axes
     HAS_MATPLOTLIB = True
 except ImportError:
     HAS_MATPLOTLIB = False
+
+
+def _is_inline_backend() -> bool:
+    """True when matplotlib is using a Jupyter inline-style backend.
+
+    In that case the notebook auto-displays the returned Figure, so calling
+    plt.show() additionally would cause a double-render.
+    """
+    if not HAS_MATPLOTLIB:
+        return False
+    backend = matplotlib.get_backend().lower()
+    return 'inline' in backend or 'nbagg' in backend or 'ipympl' in backend
 
 
 def plot_ray_path(trace,
@@ -955,6 +968,11 @@ def plot(model: 'Model',
          overlay_vmax: Optional[float] = None,
          overlay_label: Optional[str] = None,
          contour_by: Optional[str] = None,
+         show_cell_labels: bool = False,
+         show_material_labels: bool = False,
+         show_surface_labels: bool = False,
+         label_min_pixels: int = 100,
+         label_margin: int = 20,
          **kwargs):
     """Plot geometry slice using grid-based rendering.
 
@@ -1074,9 +1092,47 @@ def plot(model: 'Model',
         **kwargs
     )
 
+    if show_cell_labels or show_material_labels or show_surface_labels:
+        if 'nx' in grid and 'ny' in grid:
+            n_h, n_v = grid['nx'], grid['ny']
+            h_min, h_max = grid['x_min'], grid['x_max']
+            v_min, v_max = grid['y_min'], grid['y_max']
+        elif 'nx' in grid and 'nz' in grid:
+            n_h, n_v = grid['nx'], grid['nz']
+            h_min, h_max = grid['x_min'], grid['x_max']
+            v_min, v_max = grid['z_min'], grid['z_max']
+        elif 'ny' in grid and 'nz' in grid:
+            n_h, n_v = grid['ny'], grid['nz']
+            h_min, h_max = grid['y_min'], grid['y_max']
+            v_min, v_max = grid['z_min'], grid['z_max']
+        else:
+            n_h, n_v = grid['nu'], grid['nv']
+            h_min, h_max = grid['u_min'], grid['u_max']
+            v_min, v_max = grid['v_min'], grid['v_max']
+
+        def _draw(labels, prefix, color, id_key='id'):
+            for lbl in labels:
+                wx = h_min + (lbl['px'] + 0.5) / n_h * (h_max - h_min)
+                wy = v_min + (lbl['py'] + 0.5) / n_v * (v_max - v_min)
+                ax.text(wx, wy, f"{prefix}{lbl[id_key]}",
+                        ha='center', va='center', fontsize=8,
+                        color='white', fontweight='bold',
+                        bbox=dict(boxstyle='round,pad=0.2',
+                                  facecolor=color, alpha=0.6))
+
+        if show_cell_labels:
+            _draw(model.find_label_positions(grid, min_pixels=label_min_pixels,
+                                             by_material=False), 'C', 'black')
+        if show_material_labels:
+            _draw(model.find_label_positions(grid, min_pixels=label_min_pixels,
+                                             by_material=True), 'M', 'black')
+        if show_surface_labels:
+            _draw(model.find_surface_label_positions(grid, margin=label_margin),
+                  'S', 'darkred')
+
     if save:
         fig.savefig(save, dpi=150, bbox_inches='tight')
-    elif own_fig:
+    elif own_fig and not _is_inline_backend():
         plt.show()
 
     return ax
@@ -1125,7 +1181,7 @@ def plot_views(model: 'Model',
 
     if save:
         fig.savefig(save, dpi=150, bbox_inches='tight')
-    else:
+    elif not _is_inline_backend():
         plt.show()
 
     return fig

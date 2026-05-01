@@ -278,6 +278,16 @@ class Model:
                 raise RuntimeError("C extension not available")
             self._sys = _alea.System()
 
+    def _ensure_query_caches(self):
+        """Ensure C system exists and query acceleration caches are built.
+
+        Called by query methods (point lookups, raycasts, slices, volume
+        estimation). The C entry point is idempotent: once a cache bit is
+        set, subsequent calls reduce to atomic checks.
+        """
+        self._ensure_sys()
+        self._sys.prepare_query_acceleration()
+
     def _is_mixture(self, material_id: int) -> bool:
         """Check if a material ID refers to a mixture."""
         if self._sys is None:
@@ -877,6 +887,16 @@ class Model:
         self._expand_all_elements()
         self._sys.export_openmc(str(filename))
 
+    def export_serpent(self, filename: Union[str, Path]) -> None:
+        """Export model to Serpent input format.
+
+        Args:
+            filename: Output file path.
+        """
+        self._ensure_sys()
+        self._expand_all_elements()
+        self._sys.export_serpent(str(filename))
+
     def to_mcnp_string(self) -> str:
         """Generate MCNP input as string.
 
@@ -968,13 +988,13 @@ class Model:
 
     def get_slice_curves_y(self, y: float, bounds: Tuple[float, float, float, float]) -> Dict[str, Any]:
         """Get analytical curves for XZ slice at y=constant."""
-        self._ensure_sys()
+        self._ensure_query_caches()
         x_min, x_max, z_min, z_max = bounds
         return self._sys.get_slice_curves_y(y, x_min, x_max, z_min, z_max)
 
     def get_slice_curves_x(self, x: float, bounds: Tuple[float, float, float, float]) -> Dict[str, Any]:
         """Get analytical curves for YZ slice at x=constant."""
-        self._ensure_sys()
+        self._ensure_query_caches()
         y_min, y_max, z_min, z_max = bounds
         return self._sys.get_slice_curves_x(x, y_min, y_max, z_min, z_max)
 
@@ -983,14 +1003,14 @@ class Model:
                          up: Tuple[float, float, float],
                          bounds: Tuple[float, float, float, float]) -> Dict[str, Any]:
         """Get analytical curves for arbitrary plane slice."""
-        self._ensure_sys()
+        self._ensure_query_caches()
         u_min, u_max, v_min, v_max = bounds
         return self._sys.get_slice_curves(origin, normal, up, u_min, u_max, v_min, v_max)
 
     def find_cells_grid_z(self, z, bounds, resolution=(100, 100),
                           universe_depth=-1, detect_errors=False):
         """Sample cells on a grid for XY slice at z=constant."""
-        self._ensure_sys()
+        self._ensure_query_caches()
         x_min, x_max, y_min, y_max = bounds
         nx, ny = resolution
         return self._sys.find_cells_grid_z(z, x_min, x_max, y_min, y_max, nx, ny,
@@ -1000,7 +1020,7 @@ class Model:
     def find_cells_grid_y(self, y, bounds, resolution=(100, 100),
                           universe_depth=-1, detect_errors=False):
         """Sample cells on a grid for XZ slice at y=constant."""
-        self._ensure_sys()
+        self._ensure_query_caches()
         x_min, x_max, z_min, z_max = bounds
         nx, nz = resolution
         return self._sys.find_cells_grid_y(y, x_min, x_max, z_min, z_max, nx, nz,
@@ -1010,7 +1030,7 @@ class Model:
     def find_cells_grid_x(self, x, bounds, resolution=(100, 100),
                           universe_depth=-1, detect_errors=False):
         """Sample cells on a grid for YZ slice at x=constant."""
-        self._ensure_sys()
+        self._ensure_query_caches()
         y_min, y_max, z_min, z_max = bounds
         ny, nz = resolution
         return self._sys.find_cells_grid_x(x, y_min, y_max, z_min, z_max, ny, nz,
@@ -1020,7 +1040,7 @@ class Model:
     def find_cells_grid(self, origin, normal, up, bounds,
                         resolution=(100, 100), universe_depth=-1, detect_errors=False):
         """Sample cells on a grid for arbitrary plane slice."""
-        self._ensure_sys()
+        self._ensure_query_caches()
         u_min, u_max, v_min, v_max = bounds
         nu, nv = resolution
         return self._sys.find_cells_grid(origin, normal, up, u_min, u_max, v_min, v_max, nu, nv,
@@ -1203,7 +1223,7 @@ class Model:
         Returns:
             List of cell indices
         """
-        self._ensure_sys()
+        self._ensure_query_caches()
         x_min, x_max, y_min, y_max, z_min, z_max = bounds
         return self._sys.get_cells_in_bbox(x_min, x_max, y_min, y_max, z_min, z_max)
 
@@ -1260,7 +1280,7 @@ class Model:
             if cell:
                 print(f"Point is in cell {cell.id}, material {cell.material}")
         """
-        self._ensure_sys()
+        self._ensure_query_caches()
         result = self._sys.find_cell(x, y, z)
         if result is None:
             return None
@@ -1330,6 +1350,8 @@ class Model:
         else:
             raise ValueError("Must provide either (origin, direction) or (start, end)")
 
+        self._ensure_query_caches()
+
         # Call C raycast
         if cell_aware:
             segments = self._sys.raycast_cell_aware(ox, oy, oz, dx, dy, dz, t_max=max_distance)
@@ -1348,11 +1370,13 @@ class Model:
 
         Args:
             filename: Output file path
-            format: Export format ('mcnp' or 'openmc'). If None, detected from extension.
+            format: Export format ('mcnp', 'openmc', or 'serpent').
+                If None, detected from extension.
 
         Example:
             model.save("output.inp")              # MCNP (default)
             model.save("geometry.xml")            # OpenMC (from extension)
+            model.save("geometry.serp")           # Serpent (from extension)
             model.save("output", format="mcnp")   # Explicit format
         """
         path = Path(filename)
@@ -1362,11 +1386,15 @@ class Model:
             ext = path.suffix.lower()
             if ext in ('.xml',):
                 format = 'openmc'
+            elif ext in ('.serp', '.sss', '.serpent'):
+                format = 'serpent'
             else:
                 format = 'mcnp'
 
         if format == 'openmc':
             self.export_openmc(filename)
+        elif format == 'serpent':
+            self.export_serpent(filename)
         else:
             self.export_mcnp(filename)
 
@@ -1390,7 +1418,7 @@ class Model:
 
     def estimate_cell_volumes(self, n_rays=100000, center=None, radius=None):
         """Estimate cell volumes using random ray tracing."""
-        self._ensure_sys()
+        self._ensure_query_caches()
         if center is None or radius is None:
             cx, cy, cz, r = self.compute_bounding_sphere()
             if center is None:
@@ -1402,7 +1430,7 @@ class Model:
 
     def estimate_instance_volumes(self, n_rays=100000):
         """Estimate volumes per cell instance (spatial-index aware)."""
-        self._ensure_sys()
+        self._ensure_query_caches()
         return self._sys.estimate_instance_volumes(n_rays)
 
     def remove_cells_by_volume(self, volumes, threshold):
@@ -1418,18 +1446,24 @@ class Model:
                       bounds: Optional[Tuple[float, float, float, float, float, float]] = None,
                       max_depth: int = 8,
                       min_size: float = 0.1,
-                      probes_per_axis: int = 3) -> 'VoidResult':
+                      probes_per_axis: int = 3,
+                      region: Optional['Region'] = None) -> 'VoidResult':
         """Find empty space in the geometry using octree decomposition.
 
         Identifies axis-aligned bounding boxes covering regions not occupied
         by any cell. Useful for adding void cells to close geometry gaps.
 
         Args:
-            bounds: Search region (xmin, xmax, ymin, ymax, zmin, zmax).
-                If None, uses the system's automatic bounding box.
+            bounds: Search bbox (xmin, xmax, ymin, ymax, zmin, zmax).
+                If None and region is also None, uses the system's automatic
+                bounding box.
             max_depth: Maximum octree depth (higher = finer boxes).
             min_size: Minimum box side length.
             probes_per_axis: Number of probe points per axis per octree node.
+            region: Existing finite CSG region to use as the search bounds.
+                Mutually exclusive with bounds. When merging can consolidate
+                to one void cell, this region is reused instead of generating
+                a new box clip.
 
         Returns:
             VoidResult containing the void boxes.
@@ -1443,14 +1477,60 @@ class Model:
         if _alea is None:
             raise RuntimeError("C extension not available")
         self._ensure_sys()
+
+        if bounds is not None and region is not None:
+            raise ValueError("bounds and region are mutually exclusive")
+
+        bounds_region = None
+        if region is not None:
+            from .geometry import Region
+            if not isinstance(region, Region):
+                raise TypeError("region must be a geometry Region")
+            bounds_region = region._to_csg(self)
+
         c_result = _alea.generate_void(
             self._sys,
             bounds=bounds,
             max_depth=max_depth,
             min_size=min_size,
             probes_per_axis=probes_per_axis,
+            bounds_region=bounds_region,
         )
         return VoidResult(self, c_result)
+
+    def add_voids(self, voids: 'VoidResult') -> int:
+        """Commit generated void regions as material-0 cells.
+
+        Args:
+            voids: Result returned by this model's ``generate_void()``.
+
+        Returns:
+            Number of void cells added.
+        """
+        self._ensure_sys()
+        if not isinstance(voids, VoidResult):
+            raise TypeError("add_voids() expects a VoidResult")
+        if voids._model is not self:
+            raise ValueError("VoidResult belongs to a different Model")
+        return voids._c_result.add_cells()
+
+    def add_graveyard(self, voids: 'VoidResult') -> int:
+        """Add a graveyard cell enclosing generated void bounds.
+
+        The graveyard should be added after ``add_voids(voids)``.
+
+        Args:
+            voids: Result returned by this model's ``generate_void()``.
+
+        Returns:
+            1 on success.
+        """
+        self._ensure_sys()
+        if not isinstance(voids, VoidResult):
+            raise TypeError("add_graveyard() expects a VoidResult")
+        if voids._model is not self:
+            raise ValueError("VoidResult belongs to a different Model")
+        return voids._c_result.add_graveyard()
 
     # =========================================================================
     # Geometry Transforms

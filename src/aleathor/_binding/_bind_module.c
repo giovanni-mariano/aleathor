@@ -364,7 +364,7 @@ static PyMethodDef mod_methods[] = {
     {"load_openmc_string", mod_load_openmc_string, METH_VARARGS,
      "load_openmc_string(input) -> System\n\nLoad OpenMC from XML string."},
     {"generate_void", (PyCFunction)mod_generate_void, METH_VARARGS | METH_KEYWORDS,
-     "generate_void(system, bounds=None, max_depth=8, min_size=0.1, probes_per_axis=3) -> VoidResult\n\n"
+     "generate_void(system, bounds=None, max_depth=8, min_size=0.1, probes_per_axis=3, bounds_region=None) -> VoidResult\n\n"
      "Generate void regions using octree algorithm."},
     {"version", mod_version, METH_NOARGS,
      "version() -> str\n\nGet library version string."},
@@ -389,6 +389,13 @@ static PyMethodDef mod_methods[] = {
     {"disable_logging", mod_disable_logging, METH_NOARGS,
      "disable_logging()\n\n"
      "Disable Python logging integration, restore default stderr output."},
+    /* Nuclear data */
+    {"parse_zaid", mod_parse_zaid, METH_VARARGS,
+     "parse_zaid(zaid) -> dict\n\n"
+     "Parse ZAID string (e.g. '92235.80c') into Z, A, metastable, type."},
+    {"reaction_classify", mod_reaction_classify, METH_VARARGS,
+     "reaction_classify(mt) -> str\n\n"
+     "Classify reaction MT into 'absorption', 'scatter', or 'multiply'."},
     {NULL, NULL, 0, NULL}
 };
 
@@ -414,6 +421,10 @@ PyMODINIT_FUNC PyInit__alea(void) {
     /* Initialize types */
     if (PyType_Ready(&AleaTHORSystemType) < 0) return NULL;
     if (PyType_Ready(&AleaTHORVoidResultType) < 0) return NULL;
+    if (PyType_Ready(&AleaTHORXsDirType) < 0) return NULL;
+    if (PyType_Ready(&AleaTHORNuclideType) < 0) return NULL;
+    if (PyType_Ready(&AleaTHORNucMaterialType) < 0) return NULL;
+    if (PyType_Ready(&AleaTHORMultigroupType) < 0) return NULL;
 
     /* Create module */
     PyObject* m = PyModule_Create(&mod_module);
@@ -430,6 +441,35 @@ PyMODINIT_FUNC PyInit__alea(void) {
     Py_INCREF(&AleaTHORVoidResultType);
     if (PyModule_AddObject(m, "VoidResult", (PyObject*)&AleaTHORVoidResultType) < 0) {
         Py_DECREF(&AleaTHORVoidResultType);
+        Py_DECREF(m);
+        return NULL;
+    }
+
+    /* Nuclear data types */
+    Py_INCREF(&AleaTHORXsDirType);
+    if (PyModule_AddObject(m, "XsDir", (PyObject*)&AleaTHORXsDirType) < 0) {
+        Py_DECREF(&AleaTHORXsDirType);
+        Py_DECREF(m);
+        return NULL;
+    }
+
+    Py_INCREF(&AleaTHORNuclideType);
+    if (PyModule_AddObject(m, "Nuclide", (PyObject*)&AleaTHORNuclideType) < 0) {
+        Py_DECREF(&AleaTHORNuclideType);
+        Py_DECREF(m);
+        return NULL;
+    }
+
+    Py_INCREF(&AleaTHORNucMaterialType);
+    if (PyModule_AddObject(m, "NucMaterial", (PyObject*)&AleaTHORNucMaterialType) < 0) {
+        Py_DECREF(&AleaTHORNucMaterialType);
+        Py_DECREF(m);
+        return NULL;
+    }
+
+    Py_INCREF(&AleaTHORMultigroupType);
+    if (PyModule_AddObject(m, "Multigroup", (PyObject*)&AleaTHORMultigroupType) < 0) {
+        Py_DECREF(&AleaTHORMultigroupType);
         Py_DECREF(m);
         return NULL;
     }

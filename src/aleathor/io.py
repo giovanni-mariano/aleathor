@@ -157,6 +157,16 @@ def write_openmc(model: Model, filename: Union[str, Path]) -> None:
     model.export_openmc(filename)
 
 
+def write_serpent(model: Model, filename: Union[str, Path]) -> None:
+    """Write model to Serpent input format.
+
+    Args:
+        model: Model to export.
+        filename: Output file path.
+    """
+    model.export_serpent(filename)
+
+
 class _SurfaceRef:
     """Lightweight reference to a surface by MCNP ID (for imported models)."""
     __slots__ = ('id',)

@@ -106,6 +106,67 @@ class TestFlattenUniverse:
         simple_model.flatten_universe(0)
 
 
+class TestVoidGenerationApi:
+    """Tests for model-owned void commit operations."""
+
+    def test_add_voids_is_model_owned(self):
+        """Generated voids should be committed through Model, not VoidResult."""
+        import aleathor as ath
+
+        model = ath.Model("Void API Test")
+        sphere = ath.Sphere(0, 0, 0, radius=1.0)
+        model.add_cell(region=-sphere, material=1, density=1.0)
+
+        before = len(model.cells)
+        voids = model.generate_void(
+            bounds=(-2, 2, -2, 2, -2, 2),
+            max_depth=2,
+            min_size=0.5,
+        )
+        voids.merge()
+
+        assert not hasattr(voids, "add_cells")
+        assert not hasattr(voids, "add_graveyard")
+
+        added = model.add_voids(voids)
+        assert added > 0
+        assert len(model.cells) == before + added
+
+    def test_generate_void_accepts_region_bounds(self):
+        """Void generation can use an existing finite region as bounds."""
+        import aleathor as ath
+
+        model = ath.Model("Void Region Bounds Test")
+        sphere = ath.Sphere(0, 0, 0, radius=1.0)
+        bounds = ath.Sphere(0, 0, 0, radius=3.0)
+        model.add_cell(region=-sphere, material=1, density=1.0)
+
+        voids = model.generate_void(
+            region=-bounds,
+            max_depth=2,
+            min_size=0.5,
+        )
+        assert len(voids) > 0
+
+        voids.merge()
+        added = model.add_voids(voids)
+        assert added > 0
+
+    def test_generate_void_rejects_bounds_and_region_together(self):
+        """Bbox bounds and CSG region bounds are mutually exclusive."""
+        import aleathor as ath
+
+        model = ath.Model("Void Bounds Error Test")
+        sphere = ath.Sphere(0, 0, 0, radius=1.0)
+        model.add_cell(region=-sphere, material=1, density=1.0)
+
+        with pytest.raises(ValueError, match="mutually exclusive"):
+            model.generate_void(
+                bounds=(-2, 2, -2, 2, -2, 2),
+                region=-ath.Sphere(0, 0, 0, radius=3.0),
+            )
+
+
 class TestMultiCellFiltering:
     """Tests for filtering with multiple cells."""
 

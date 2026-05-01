@@ -99,6 +99,7 @@ static PyObject* AleaTHORSystem_find_cell(AleaTHORSystemObject* self, PyObject* 
         PyErr_SetString(PyExc_RuntimeError, "System not initialized");
         return NULL;
     }
+    if (ensure_query_acceleration(self) < 0) return NULL;
 
     int cell_idx = alea_find_cell(self->sys, x, y, z);
     if (cell_idx < 0) {
@@ -137,6 +138,7 @@ static PyObject* AleaTHORSystem_material_at(AleaTHORSystemObject* self, PyObject
         PyErr_SetString(PyExc_RuntimeError, "System not initialized");
         return NULL;
     }
+    if (ensure_query_acceleration(self) < 0) return NULL;
 
     alea_material_id_t mat = alea_material_at(self->sys, x, y, z);
     if (mat == ALEA_MATERIAL_NONE) {
@@ -347,6 +349,11 @@ static PyObject* AleaTHORSystem_build_spatial_index(AleaTHORSystemObject* self, 
         return NULL;
     }
 
+    Py_RETURN_NONE;
+}
+
+static PyObject* AleaTHORSystem_prepare_query_acceleration(AleaTHORSystemObject* self, PyObject* Py_UNUSED(ignored)) {
+    if (ensure_query_acceleration(self) < 0) return NULL;
     Py_RETURN_NONE;
 }
 

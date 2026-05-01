@@ -288,7 +288,7 @@ class Cell:
         Returns:
             True if point is inside this cell
         """
-        self._model._ensure_sys()
+        self._model._ensure_query_caches()
         result = self._model._sys.find_cell(x, y, z)
         if result is None:
             return False
@@ -676,6 +676,8 @@ class VoidResult:
     covering empty space in the geometry.
 
     Supports iteration over boxes, merging, and conversion to CSG nodes.
+    Commit generated voids through ``Model.add_voids(voids)`` so model
+    mutations stay explicit on the model API.
 
     Example:
         voids = model.generate_void(bounds=(-10, 10, -10, 10, -10, 10))
@@ -727,29 +729,6 @@ class VoidResult:
             Number of boxes after merging
         """
         return self._c_result.merge()
-
-    def add_cells(self) -> int:
-        """Add void boxes as cells to the geometry system.
-
-        Each void box becomes a new cell with material 0 (void).
-        Cells are added directly in the C backend.
-
-        Returns:
-            Number of cells added
-        """
-        return self._c_result.add_cells()
-
-    def add_graveyard(self) -> int:
-        """Add a graveyard cell enclosing the void bounds.
-
-        Creates a sphere that fully encloses the void bounding box
-        and registers a cell outside it with zero importance (kills
-        escaped particles). Must be called after ``add_cells()``.
-
-        Returns:
-            1 on success
-        """
-        return self._c_result.add_graveyard()
 
     def to_node(self) -> int:
         """Convert void result to a CSG node (union of boxes).

@@ -48,6 +48,7 @@ static PyObject* AleaTHORSystem_find_all_cells(AleaTHORSystemObject* self, PyObj
         PyErr_SetString(PyExc_RuntimeError, "System not initialized");
         return NULL;
     }
+    if (ensure_query_acceleration(self) < 0) return NULL;
 
     /* Allocate hits on stack - 64 levels should be more than enough */
     alea_cell_hit_t hits[64];
@@ -244,6 +245,7 @@ static PyObject* AleaTHORSystem_find_cell_at(AleaTHORSystemObject* self, PyObjec
     double x, y, z;
     if (!PyArg_ParseTuple(args, "ddd", &x, &y, &z)) return NULL;
     if (!self->sys) { PyErr_SetString(PyExc_RuntimeError, "System not initialized"); return NULL; }
+    if (ensure_query_acceleration(self) < 0) return NULL;
 
     int cell_id, material;
     int result = alea_find_cell_at(self->sys, x, y, z, &cell_id, &material);

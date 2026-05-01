@@ -489,14 +489,6 @@ Options (for command line use --option, in batch file use option without --):
     print(f"  Loaded in {(t1-t0)*1000:.1f} ms")
     print(f"  Cells: {len(model.cells)}")
 
-    # Build spatial index for faster queries
-    print("Building spatial index...")
-    t0 = time.time()
-    model.build_spatial_index()
-    t1 = time.time()
-    print(f"  Built in {(t1-t0)*1000:.1f} ms")
-    print()
-
     # Batch mode
     if args.batch:
         return run_batch(args.batch, model, args.verbose)

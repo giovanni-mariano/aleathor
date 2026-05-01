@@ -17,15 +17,17 @@
 #define PY_SSIZE_T_CLEAN
 #include <Python.h>
 #include <structmember.h>
+#include <stdint.h>
 
 /* Public API headers */
 #include "alea.h"
 #include "alea_mcnp.h"
 #include "alea_openmc.h"
+#include "alea_serpent.h"
 #include "alea_slice.h"
 #include "alea_raycast.h"
 #include "alea_mesh.h"
-#include "alea_void.h"
+#include "alea_nucdata.h"
 
 #include <signal.h>
 
@@ -215,6 +217,18 @@ static PyObject* build_node_tree(const alea_system_t* sys, alea_node_id_t node) 
     return result;
 }
 
+static int ensure_query_acceleration(AleaTHORSystemObject* self) {
+    if (!self->sys) {
+        PyErr_SetString(PyExc_RuntimeError, "System not initialized");
+        return -1;
+    }
+    if (alea_prepare_query_acceleration(self->sys) != 0) {
+        PyErr_SetString(PyExc_RuntimeError, alea_error());
+        return -1;
+    }
+    return 0;
+}
+
 /* ============================================================================
  * Implementation Files
  * ============================================================================ */
@@ -286,6 +300,8 @@ static PyMethodDef AleaTHORSystem_methods[] = {
      "flatten_universe(universe_id=0) -> int\n\nFlatten universe hierarchy."},
     {"build_spatial_index", (PyCFunction)AleaTHORSystem_build_spatial_index, METH_NOARGS,
      "build_spatial_index()\n\nBuild spatial index for fast queries (no flattening needed)."},
+    {"prepare_query_acceleration", (PyCFunction)AleaTHORSystem_prepare_query_acceleration, METH_NOARGS,
+     "prepare_query_acceleration()\n\nBuild all query caches used by point queries, grids, and raycasts."},
     {"get_universe", (PyCFunction)AleaTHORSystem_get_universe, METH_VARARGS,
      "get_universe(universe_id) -> dict\n\nGet universe info."},
 
@@ -453,6 +469,9 @@ static PyMethodDef AleaTHORSystem_methods[] = {
     {"export_openmc", (PyCFunction)AleaTHORSystem_export_openmc,
      METH_VARARGS | METH_KEYWORDS,
      "export_openmc(filename)\n\nExport to OpenMC XML format."},
+    {"export_serpent", (PyCFunction)AleaTHORSystem_export_serpent,
+     METH_VARARGS | METH_KEYWORDS,
+     "export_serpent(filename)\n\nExport to Serpent input format."},
 
     /* Merge */
     {"merge", (PyCFunction)AleaTHORSystem_merge, METH_VARARGS | METH_KEYWORDS,
@@ -766,4 +785,5 @@ static PyTypeObject AleaTHORSystemType = {
  * ============================================================================ */
 
 #include "_bind_void.c"
+#include "_bind_nucdata.c"
 #include "_bind_module.c"

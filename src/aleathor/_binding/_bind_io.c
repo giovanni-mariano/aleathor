@@ -85,6 +85,34 @@ static PyObject* AleaTHORSystem_export_openmc(AleaTHORSystemObject* self, PyObje
     Py_RETURN_NONE;
 }
 
+static PyObject* AleaTHORSystem_export_serpent(AleaTHORSystemObject* self, PyObject* args, PyObject* kwds) {
+    const char* filename;
+    static char* kwlist[] = {"filename", NULL};
+
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "s", kwlist, &filename)) {
+        return NULL;
+    }
+
+    if (!self->sys) {
+        PyErr_SetString(PyExc_RuntimeError, "System not initialized");
+        return NULL;
+    }
+
+    int result;
+    sighandler_func old_sigint = install_sigint();
+    Py_BEGIN_ALLOW_THREADS
+    result = serpent_export_system(self->sys, filename);
+    Py_END_ALLOW_THREADS
+    if (restore_sigint(old_sigint)) return NULL;
+
+    if (result < 0) {
+        PyErr_Format(PyExc_IOError, "Failed to export to %s: %s", filename, alea_error());
+        return NULL;
+    }
+
+    Py_RETURN_NONE;
+}
+
 /* ============================================================================
  * AleaTHORSystem Methods - Merge
  * ============================================================================ */

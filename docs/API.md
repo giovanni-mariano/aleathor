@@ -673,7 +673,7 @@ If `center` or `radius` are not given, a bounding sphere is computed automatical
 model.estimate_instance_volumes(n_rays: int = 100000) -> dict
 ```
 
-Estimate volumes per cell instance (spatial-index aware). Requires `build_spatial_index()` first.
+Estimate volumes per cell instance (spatial-index aware). Query acceleration is prepared automatically if needed.
 
 ### model.remove_cells_by_volume
 
@@ -695,10 +695,13 @@ model.generate_void(
     max_depth: int = 8,
     min_size: float = 0.1,
     probes_per_axis: int = 3,
+    region: Region = None,
 ) -> VoidResult
 ```
 
-Find empty space in the geometry using octree decomposition. Identifies axis-aligned bounding boxes covering regions not occupied by any cell. If `bounds` is None, uses the system's automatic bounding box.
+Find empty space in the geometry using octree decomposition. Identifies axis-aligned bounding boxes covering regions not occupied by any cell. If `bounds` and `region` are both None, uses the system's automatic bounding box.
+
+Use `bounds` for an axis-aligned bbox. Use `region` to supply an existing finite CSG region, such as `-outer_box` or `-outer_sphere`; this lets void merging reuse that region instead of generating a new box clip.
 
 ### VoidResult
 
@@ -710,15 +713,22 @@ Find empty space in the geometry using octree decomposition. Identifies axis-ali
 | `voids.get_box(i)` | `tuple` | Get box by index |
 | `voids.get_boxes()` | `list[tuple]` | All boxes |
 | `voids.merge()` | `int` | Merge adjacent boxes, returns new count |
-| `voids.add_cells()` | `int` | Add void boxes as cells to system, returns count added |
-| `voids.add_graveyard()` | `int` | Add shell + graveyard cells enclosing void bounds |
 | `voids.to_node()` | `int` | Convert to CSG node (union of boxes) |
 | `voids.total_volume()` | `float` | Sum of all box volumes |
 | `for box in voids` | `tuple` | Iterate over boxes |
 
+Commit generated voids through the model:
+
+```python
+added = model.add_voids(voids)
+model.add_graveyard(voids)
+```
+
 ---
 
 ## Spatial Indexing
+
+Query methods (`cell_at`, `trace`, `find_cells_grid_*`, `get_cells_in_bbox`, `estimate_*`, `plot`) build their acceleration caches lazily on first use. There is no public preparation entry point — you do not need to call anything before issuing queries.
 
 ### model.build_spatial_index
 
@@ -726,7 +736,7 @@ Find empty space in the geometry using octree decomposition. Identifies axis-ali
 model.build_spatial_index() -> Model
 ```
 
-Build a KD-tree over cell instances for fast queries. Returns `self` for chaining. **Call this once after loading large models with FILLs** before doing slice rendering.
+Build only the spatial index over cell instances. Returns `self` for chaining. Rarely needed in user code; query methods handle this automatically.
 
 ### model.flatten_universe
 

@@ -23,6 +23,7 @@ static PyObject* AleaTHORSystem_raycast(AleaTHORSystemObject* self, PyObject* ar
         return NULL;
     }
     if (!self->sys) { PyErr_SetString(PyExc_RuntimeError, "System not initialized"); return NULL; }
+    if (ensure_query_acceleration(self) < 0) return NULL;
 
     alea_raycast_result_t* result = alea_raycast_result_create();
     if (!result) {
@@ -66,6 +67,7 @@ static PyObject* AleaTHORSystem_ray_first_cell(AleaTHORSystemObject* self, PyObj
     double ox, oy, oz, dx, dy, dz, t_max = 0.0;
     if (!PyArg_ParseTuple(args, "dddddd|d", &ox, &oy, &oz, &dx, &dy, &dz, &t_max)) return NULL;
     if (!self->sys) { PyErr_SetString(PyExc_RuntimeError, "System not initialized"); return NULL; }
+    if (ensure_query_acceleration(self) < 0) return NULL;
 
     double t;
     int cell_id = alea_ray_first_cell(self->sys, ox, oy, oz, dx, dy, dz, t_max, &t);
@@ -195,6 +197,7 @@ static PyObject* AleaTHORSystem_estimate_instance_volumes(AleaTHORSystemObject* 
     int n_rays;
     if (!PyArg_ParseTuple(args, "i", &n_rays)) return NULL;
     if (!self->sys) { PyErr_SetString(PyExc_RuntimeError, "System not initialized"); return NULL; }
+    if (ensure_query_acceleration(self) < 0) return NULL;
 
     size_t count = alea_spatial_index_instance_count(self->sys);
     if (count == 0) {
@@ -274,6 +277,7 @@ static PyObject* AleaTHORSystem_raycast_cell_aware(AleaTHORSystemObject* self, P
     if (!PyArg_ParseTupleAndKeywords(args, kwds, "dddddd|d", kwlist,
                                      &ox, &oy, &oz, &dx, &dy, &dz, &t_max)) return NULL;
     if (!self->sys) { PyErr_SetString(PyExc_RuntimeError, "System not initialized"); return NULL; }
+    if (ensure_query_acceleration(self) < 0) return NULL;
 
     alea_raycast_result_t* result = alea_raycast_result_create();
     if (!result) { PyErr_SetString(PyExc_MemoryError, "Failed to allocate raycast result"); return NULL; }

@@ -25,6 +25,7 @@ Example:
     # Export
     model.export_mcnp("geometry.inp")
     model.export_openmc("geometry.xml")
+    model.export_serpent("geometry.serp")
 """
 
 __version__ = "0.1.0"
@@ -77,6 +78,7 @@ from .io import (
     read_openmc_string,
     write_mcnp,
     write_openmc,
+    write_serpent,
 )
 
 from .collections import (
@@ -85,6 +87,15 @@ from .collections import (
     TraceResult,
     TraceSegment,
     VoidResult,
+)
+
+from .nucdata import (
+    XsDir,
+    Nuclide,
+    NucMaterial,
+    Multigroup,
+    parse_zaid,
+    reaction_classify,
 )
 
 # Design document API aliases
@@ -221,6 +232,7 @@ __all__ = [
     'read_openmc_string',
     'write_mcnp',
     'write_openmc',
+    'write_serpent',
     # Collections
     'Cell',
     'CellCollection',
@@ -258,4 +270,11 @@ __all__ = [
     'GRID_ERROR_OK',
     'GRID_ERROR_OVERLAP',
     'GRID_ERROR_UNDEFINED',
+    # Nuclear data
+    'XsDir',
+    'Nuclide',
+    'NucMaterial',
+    'Multigroup',
+    'parse_zaid',
+    'reaction_classify',
 ]

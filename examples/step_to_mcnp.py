@@ -552,13 +552,14 @@ def main():
     print("\n" + "=" * 50)
     print("Void generation")
     print("=" * 50)
-    voids = model.generate_void(bounds=bounds, max_depth=3)
+    bounds_box = Box(*bounds)
+    voids = model.generate_void(region=-bounds_box, max_depth=3)
     print(f"Found {len(voids)} void boxes")
     voids.merge()
     print(f"After merge: {len(voids)} boxes")
-    n_added = voids.add_cells()
+    n_added = model.add_voids(voids)
     print(f"Added {n_added} void cell(s)")
-    voids.add_graveyard()
+    model.add_graveyard(voids)
     print("Added graveyard cell")
 
     # ---- Simplify CSG (eliminate #, double negation, etc.) ----

@@ -145,6 +145,36 @@ class TestExtractSliceParams:
 
 
 # =========================================================================
+# Serpent export API
+# =========================================================================
+
+
+class TestSerpentExport:
+    """Test Serpent export bindings are available through the Python API."""
+
+    def test_model_export_serpent(self, simple_model, tmp_path):
+        filepath = tmp_path / "geometry.serp"
+        simple_model.export_serpent(filepath)
+        content = filepath.read_text()
+        assert "cell " in content
+        assert "surf " in content
+
+    def test_write_serpent(self, simple_model, tmp_path):
+        from aleathor import write_serpent
+
+        filepath = tmp_path / "geometry.sss"
+        write_serpent(simple_model, filepath)
+        assert filepath.exists()
+        assert "cell " in filepath.read_text()
+
+    def test_save_detects_serpent_extension(self, simple_model, tmp_path):
+        filepath = tmp_path / "geometry.serpent"
+        simple_model.save(filepath)
+        assert filepath.exists()
+        assert "surf " in filepath.read_text()
+
+
+# =========================================================================
 # plotting module-level functions
 # =========================================================================
 

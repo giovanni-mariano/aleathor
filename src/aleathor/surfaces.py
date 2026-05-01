@@ -28,6 +28,9 @@ class Surface(ABC):
         - Negative = inside
         - Positive = outside
 
+    Surfaces are immutable after construction. To change parameters,
+    create a new surface instead.
+
     Attributes:
         id: Surface ID (assigned when added to model).
         name: Optional human-readable name.
@@ -35,6 +38,7 @@ class Surface(ABC):
     """
 
     _next_id = 1  # Auto-increment ID counter
+    _frozen = False
 
     def __init__(self, name: Optional[str] = None,
                  boundary: str = 'transmissive',
@@ -53,6 +57,30 @@ class Surface(ABC):
         else:
             self.id = Surface._next_id
             Surface._next_id += 1
+
+    def __init_subclass__(cls, **kwargs):
+        super().__init_subclass__(**kwargs)
+        original_init = cls.__init__
+
+        def frozen_init(self, *args, **kw):
+            object.__setattr__(self, '_init_depth', getattr(self, '_init_depth', 0) + 1)
+            try:
+                original_init(self, *args, **kw)
+            finally:
+                depth = self._init_depth - 1
+                object.__setattr__(self, '_init_depth', depth)
+                if depth == 0:
+                    object.__setattr__(self, '_frozen', True)
+
+        cls.__init__ = frozen_init
+
+    def __setattr__(self, name, value):
+        if self._frozen:
+            raise AttributeError(
+                f"Cannot modify '{name}' on a frozen {self.__class__.__name__}. "
+                f"Surfaces are immutable — create a new one instead."
+            )
+        object.__setattr__(self, name, value)
 
     @abstractmethod
     def evaluate(self, point: Tuple[float, float, float]) -> float:

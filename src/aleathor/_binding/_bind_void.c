@@ -21,7 +21,7 @@ typedef struct {
 
 static void AleaTHORVoidResult_dealloc(AleaTHORVoidResultObject* self) {
     if (self->result) {
-        alea_void_result_destroy(self->result);
+        alea_void_free(self->result);
     }
     Py_XDECREF(self->sys_ref);
     Py_TYPE(self)->tp_free((PyObject*)self);
@@ -33,7 +33,7 @@ static PyObject* AleaTHORVoidResult_get_box_count(AleaTHORVoidResultObject* self
         PyErr_SetString(PyExc_RuntimeError, "Result not initialized");
         return NULL;
     }
-    return PyLong_FromSize_t(alea_void_box_count(self->result));
+    return PyLong_FromSize_t(alea_void_count(self->result));
 }
 
 static PyObject* AleaTHORVoidResult_get_box(AleaTHORVoidResultObject* self, PyObject* args) {
@@ -46,7 +46,7 @@ static PyObject* AleaTHORVoidResult_get_box(AleaTHORVoidResultObject* self, PyOb
     }
 
     alea_bbox_t box;
-    if (alea_void_box_get(self->result, index, &box) < 0) {
+    if (alea_void_get(self->result, index, &box) < 0) {
         PyErr_Format(PyExc_IndexError, "Box index %zu out of range", index);
         return NULL;
     }
@@ -63,13 +63,13 @@ static PyObject* AleaTHORVoidResult_get_boxes(AleaTHORVoidResultObject* self, Py
         return NULL;
     }
 
-    size_t count = alea_void_box_count(self->result);
+    size_t count = alea_void_count(self->result);
     PyObject* list = PyList_New(count);
     if (!list) return NULL;
 
     for (size_t i = 0; i < count; i++) {
         alea_bbox_t box;
-        if (alea_void_box_get(self->result, i, &box) < 0) {
+        if (alea_void_get(self->result, i, &box) < 0) {
             Py_DECREF(list);
             PyErr_SetString(PyExc_RuntimeError, "Failed to get box");
             return NULL;
@@ -110,7 +110,7 @@ static PyObject* AleaTHORVoidResult_merge(AleaTHORVoidResultObject* self, PyObje
         return NULL;
     }
 
-    int result = alea_merge_void_cells(self->sys_ref->sys, self->result, NULL);
+    int result = alea_void_merge(self->sys_ref->sys, self->result);
     if (result < 0) {
         PyErr_SetString(PyExc_RuntimeError, alea_error());
         return NULL;
@@ -183,14 +183,18 @@ static PyObject* mod_generate_void(PyObject* self, PyObject* args, PyObject* kwd
     (void)self;
     AleaTHORSystemObject* sys_obj;
     PyObject* bounds_obj = Py_None;
+    PyObject* bounds_region_obj = Py_None;
     int max_depth = 8;
     double min_size = 0.1;
     int probes_per_axis = 3;
-    static char* kwlist[] = {"system", "bounds", "max_depth", "min_size", "probes_per_axis", NULL};
+    static char* kwlist[] = {
+        "system", "bounds", "max_depth", "min_size", "probes_per_axis", "bounds_region", NULL
+    };
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwds, "O!|Oidi", kwlist,
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "O!|OidiO", kwlist,
                                      &AleaTHORSystemType, &sys_obj,
-                                     &bounds_obj, &max_depth, &min_size, &probes_per_axis)) {
+                                     &bounds_obj, &max_depth, &min_size, &probes_per_axis,
+                                     &bounds_region_obj)) {
         return NULL;
     }
 
@@ -199,9 +203,15 @@ static PyObject* mod_generate_void(PyObject* self, PyObject* args, PyObject* kwd
         return NULL;
     }
 
+    if (bounds_obj != Py_None && bounds_region_obj != Py_None) {
+        PyErr_SetString(PyExc_ValueError, "bounds and bounds_region are mutually exclusive");
+        return NULL;
+    }
+
     /* Parse bounds if provided */
     alea_bbox_t bounds;
     alea_bbox_t* bounds_ptr = NULL;
+    alea_node_id_t bounds_region = ALEA_NODE_ID_INVALID;
 
     if (bounds_obj != Py_None) {
         if (!PyTuple_Check(bounds_obj) || PyTuple_Size(bounds_obj) != 6) {
@@ -218,6 +228,16 @@ static PyObject* mod_generate_void(PyObject* self, PyObject* args, PyObject* kwd
         bounds_ptr = &bounds;
     }
 
+    if (bounds_region_obj != Py_None) {
+        unsigned long node_id = PyLong_AsUnsignedLong(bounds_region_obj);
+        if (PyErr_Occurred()) return NULL;
+        if (node_id > (unsigned long)UINT32_MAX) {
+            PyErr_SetString(PyExc_OverflowError, "bounds_region node id is out of range");
+            return NULL;
+        }
+        bounds_region = (alea_node_id_t)node_id;
+    }
+
     /* Configure via system config */
     alea_config_t orig_cfg = alea_get_config(sys_obj->sys);
     alea_config_t cfg = orig_cfg;
@@ -229,14 +249,18 @@ static PyObject* mod_generate_void(PyObject* self, PyObject* args, PyObject* kwd
     void_result_t* result;
     sighandler_func old_sigint = install_sigint();
     Py_BEGIN_ALLOW_THREADS
-    result = alea_void_generate(sys_obj->sys, bounds_ptr);
+    if (bounds_region != ALEA_NODE_ID_INVALID) {
+        result = alea_void_generate_in_region(sys_obj->sys, bounds_region);
+    } else {
+        result = alea_void_generate_in_bbox(sys_obj->sys, bounds_ptr);
+    }
     Py_END_ALLOW_THREADS
 
     /* Restore original config */
     alea_set_config(sys_obj->sys, &orig_cfg);
 
     if (restore_sigint(old_sigint)) {
-        if (result) alea_void_result_destroy(result);
+        if (result) alea_void_free(result);
         return NULL;
     }
 
@@ -248,7 +272,7 @@ static PyObject* mod_generate_void(PyObject* self, PyObject* args, PyObject* kwd
     /* Create Python object */
     AleaTHORVoidResultObject* obj = PyObject_New(AleaTHORVoidResultObject, &AleaTHORVoidResultType);
     if (!obj) {
-        alea_void_result_destroy(result);
+        alea_void_free(result);
         return NULL;
     }
 
