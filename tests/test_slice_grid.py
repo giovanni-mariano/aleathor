@@ -6,14 +6,22 @@
 
 import pytest
 import math
+from aleathor import Model
+
+
+def test_axis_specific_grid_methods_are_not_public_model_api():
+    """Model should expose one unified grid sampling method."""
+    assert not hasattr(Model, 'find_cells_grid_z')
+    assert not hasattr(Model, 'find_cells_grid_y')
+    assert not hasattr(Model, 'find_cells_grid_x')
 
 
 class TestFindCellsGridZ:
-    """Tests for find_cells_grid_z (XY plane grid sampling)."""
+    """Tests for find_cells_grid(z=...) XY plane grid sampling."""
 
     def test_returns_dict_with_cell_ids(self, simple_model, bounds_xy):
         """Grid result should contain cell_ids."""
-        result = simple_model.find_cells_grid_z(0, bounds_xy, resolution=(10, 10))
+        result = simple_model.find_cells_grid(z=0, bounds=bounds_xy, resolution=(10, 10))
 
         assert isinstance(result, dict)
         assert 'cell_ids' in result
@@ -21,7 +29,7 @@ class TestFindCellsGridZ:
 
     def test_returns_material_ids(self, simple_model, bounds_xy):
         """Grid result should contain material_ids."""
-        result = simple_model.find_cells_grid_z(0, bounds_xy, resolution=(10, 10))
+        result = simple_model.find_cells_grid(z=0, bounds=bounds_xy, resolution=(10, 10))
 
         assert 'material_ids' in result
         assert isinstance(result['material_ids'], (list, tuple))
@@ -29,14 +37,14 @@ class TestFindCellsGridZ:
     def test_grid_dimensions_correct(self, simple_model, bounds_xy):
         """Grid should have correct number of elements."""
         nx, ny = 20, 15
-        result = simple_model.find_cells_grid_z(0, bounds_xy, resolution=(nx, ny))
+        result = simple_model.find_cells_grid(z=0, bounds=bounds_xy, resolution=(nx, ny))
 
         assert len(result['cell_ids']) == nx * ny
         assert len(result['material_ids']) == nx * ny
 
     def test_center_point_in_sphere(self, simple_model, bounds_xy):
         """Center of grid (0,0) should be in the sphere (material 1)."""
-        result = simple_model.find_cells_grid_z(0, bounds_xy, resolution=(21, 21))
+        result = simple_model.find_cells_grid(z=0, bounds=bounds_xy, resolution=(21, 21))
 
         # Center element (grid is 21x21, so center is at index 10*21 + 10 = 220)
         center_idx = 10 * 21 + 10
@@ -47,7 +55,7 @@ class TestFindCellsGridZ:
 
     def test_corner_point_outside_sphere(self, simple_model, bounds_xy):
         """Corner of grid should be in moderator (material 2)."""
-        result = simple_model.find_cells_grid_z(0, bounds_xy, resolution=(21, 21))
+        result = simple_model.find_cells_grid(z=0, bounds=bounds_xy, resolution=(21, 21))
 
         # Corner element (0,0) at grid index 0
         corner_material = result['material_ids'][0]
@@ -57,7 +65,7 @@ class TestFindCellsGridZ:
 
     def test_grid_info_included(self, simple_model, bounds_xy):
         """Result should include grid dimension info."""
-        result = simple_model.find_cells_grid_z(0, bounds_xy, resolution=(10, 10))
+        result = simple_model.find_cells_grid(z=0, bounds=bounds_xy, resolution=(10, 10))
 
         assert 'nx' in result
         assert 'ny' in result
@@ -66,12 +74,12 @@ class TestFindCellsGridZ:
 
 
 class TestFindCellsGridY:
-    """Tests for find_cells_grid_y (XZ plane grid sampling)."""
+    """Tests for find_cells_grid(y=...) XZ plane grid sampling."""
 
     def test_returns_cell_and_material_ids(self, simple_model):
         """XZ grid should return cell and material IDs."""
         bounds = (-10, 10, -10, 10)
-        result = simple_model.find_cells_grid_y(0, bounds, resolution=(10, 10))
+        result = simple_model.find_cells_grid(y=0, bounds=bounds, resolution=(10, 10))
 
         assert 'cell_ids' in result
         assert 'material_ids' in result
@@ -79,18 +87,18 @@ class TestFindCellsGridY:
     def test_correct_dimensions(self, simple_model):
         """XZ grid should have nx * nz elements."""
         bounds = (-10, 10, -10, 10)
-        result = simple_model.find_cells_grid_y(0, bounds, resolution=(15, 20))
+        result = simple_model.find_cells_grid(y=0, bounds=bounds, resolution=(15, 20))
 
         assert len(result['cell_ids']) == 15 * 20
 
 
 class TestFindCellsGridX:
-    """Tests for find_cells_grid_x (YZ plane grid sampling)."""
+    """Tests for find_cells_grid(x=...) YZ plane grid sampling."""
 
     def test_returns_cell_and_material_ids(self, simple_model):
         """YZ grid should return cell and material IDs."""
         bounds = (-10, 10, -10, 10)
-        result = simple_model.find_cells_grid_x(0, bounds, resolution=(10, 10))
+        result = simple_model.find_cells_grid(x=0, bounds=bounds, resolution=(10, 10))
 
         assert 'cell_ids' in result
         assert 'material_ids' in result
@@ -131,7 +139,7 @@ class TestMultipleCells:
 
     def test_finds_all_materials(self, multi_cell_model, bounds_xy):
         """Grid should find all materials in the slice."""
-        result = multi_cell_model.find_cells_grid_z(0, bounds_xy, resolution=(50, 50))
+        result = multi_cell_model.find_cells_grid(z=0, bounds=bounds_xy, resolution=(50, 50))
 
         materials = set(result['material_ids'])
         # Should have materials 1, 2, 3, 4
@@ -142,7 +150,7 @@ class TestMultipleCells:
 
     def test_finds_all_cells(self, multi_cell_model, bounds_xy):
         """Grid should find all cells in the slice."""
-        result = multi_cell_model.find_cells_grid_z(0, bounds_xy, resolution=(50, 50))
+        result = multi_cell_model.find_cells_grid(z=0, bounds=bounds_xy, resolution=(50, 50))
 
         cells = set(result['cell_ids'])
         # Should have 4 different cells (excluding void -1)
@@ -157,7 +165,7 @@ class TestVoidRegions:
         """Void regions should be marked with cell_id = -1."""
         # Slice outside the box should be void
         bounds = (-20, -11, -20, -11)  # Outside the box
-        result = simple_model.find_cells_grid_z(0, bounds, resolution=(5, 5))
+        result = simple_model.find_cells_grid(z=0, bounds=bounds, resolution=(5, 5))
 
         # All points should be void
         assert all(c == -1 for c in result['cell_ids'])
@@ -165,7 +173,7 @@ class TestVoidRegions:
     def test_void_material_zero(self, simple_model):
         """Void regions should have material_id = 0."""
         bounds = (-20, -11, -20, -11)
-        result = simple_model.find_cells_grid_z(0, bounds, resolution=(5, 5))
+        result = simple_model.find_cells_grid(z=0, bounds=bounds, resolution=(5, 5))
 
         # Void material is 0 (MCNP convention)
         assert all(m == 0 for m in result['material_ids'])
@@ -176,26 +184,26 @@ class TestGridNewParameters:
 
     def test_universe_depth_parameter(self, simple_model, bounds_xy):
         """Should accept universe_depth parameter."""
-        result = simple_model.find_cells_grid_z(0, bounds_xy, resolution=(10, 10),
+        result = simple_model.find_cells_grid(z=0, bounds=bounds_xy, resolution=(10, 10),
                                                  universe_depth=-1)
         assert 'cell_ids' in result
 
     def test_universe_depth_zero(self, simple_model, bounds_xy):
         """Should accept universe_depth=0 for root universe only."""
-        result = simple_model.find_cells_grid_z(0, bounds_xy, resolution=(10, 10),
+        result = simple_model.find_cells_grid(z=0, bounds=bounds_xy, resolution=(10, 10),
                                                  universe_depth=0)
         assert 'cell_ids' in result
 
     def test_detect_errors_returns_errors_array(self, simple_model, bounds_xy):
         """Should return errors array when detect_errors=True."""
-        result = simple_model.find_cells_grid_z(0, bounds_xy, resolution=(10, 10),
+        result = simple_model.find_cells_grid(z=0, bounds=bounds_xy, resolution=(10, 10),
                                                  detect_errors=True)
         assert 'errors' in result
         assert len(result['errors']) == 10 * 10
 
     def test_detect_errors_false_no_errors_array(self, simple_model, bounds_xy):
         """Should not return errors array when detect_errors=False."""
-        result = simple_model.find_cells_grid_z(0, bounds_xy, resolution=(10, 10),
+        result = simple_model.find_cells_grid(z=0, bounds=bounds_xy, resolution=(10, 10),
                                                  detect_errors=False)
         # errors key may or may not be present when detect_errors=False
         # If present, it should be all zeros or not meaningful
@@ -203,7 +211,7 @@ class TestGridNewParameters:
     def test_y_grid_with_new_params(self, simple_model):
         """Y grid should accept new parameters."""
         bounds = (-10, 10, -10, 10)
-        result = simple_model.find_cells_grid_y(0, bounds, resolution=(10, 10),
+        result = simple_model.find_cells_grid(y=0, bounds=bounds, resolution=(10, 10),
                                                  universe_depth=-1, detect_errors=True)
         assert 'cell_ids' in result
         assert 'errors' in result
@@ -211,7 +219,7 @@ class TestGridNewParameters:
     def test_x_grid_with_new_params(self, simple_model):
         """X grid should accept new parameters."""
         bounds = (-10, 10, -10, 10)
-        result = simple_model.find_cells_grid_x(0, bounds, resolution=(10, 10),
+        result = simple_model.find_cells_grid(x=0, bounds=bounds, resolution=(10, 10),
                                                  universe_depth=-1, detect_errors=True)
         assert 'cell_ids' in result
         assert 'errors' in result

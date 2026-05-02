@@ -260,23 +260,24 @@ def render_plot(model, params: PlotParams, verbose: bool = False) -> bool:
 
     # Get grid data (this is the only query needed - contours are derived from grid)
     if params.slice_type == 'Z':
-        grid = model.find_cells_grid_z(params.value, bounds, resolution,
-                                       detect_errors=params.detect_errors)
+        grid = model.find_cells_grid(z=params.value, bounds=bounds, resolution=resolution,
+                                     detect_errors=params.detect_errors)
         xlabel, ylabel = 'X', 'Y'
         title = f'Z = {params.value:.4g}'
     elif params.slice_type == 'Y':
-        grid = model.find_cells_grid_y(params.value, bounds, resolution,
-                                       detect_errors=params.detect_errors)
+        grid = model.find_cells_grid(y=params.value, bounds=bounds, resolution=resolution,
+                                     detect_errors=params.detect_errors)
         xlabel, ylabel = 'X', 'Z'
         title = f'Y = {params.value:.4g}'
     elif params.slice_type == 'X':
-        grid = model.find_cells_grid_x(params.value, bounds, resolution,
-                                       detect_errors=params.detect_errors)
+        grid = model.find_cells_grid(x=params.value, bounds=bounds, resolution=resolution,
+                                     detect_errors=params.detect_errors)
         xlabel, ylabel = 'Y', 'Z'
         title = f'X = {params.value:.4g}'
     elif params.slice_type == 'PLANE':
-        grid = model.find_cells_grid(params.origin, params.normal, params.up,
-                                     bounds, resolution, detect_errors=params.detect_errors)
+        grid = model.find_cells_grid(origin=params.origin, normal=params.normal, up=params.up,
+                                     bounds=bounds, resolution=resolution,
+                                     detect_errors=params.detect_errors)
         xlabel, ylabel = 'U', 'V'
         title = f'Plane at {params.origin}'
     else:

@@ -1007,40 +1007,51 @@ class Model:
         u_min, u_max, v_min, v_max = bounds
         return self._sys.get_slice_curves(origin, normal, up, u_min, u_max, v_min, v_max)
 
-    def find_cells_grid_z(self, z, bounds, resolution=(100, 100),
-                          universe_depth=-1, detect_errors=False):
-        """Sample cells on a grid for XY slice at z=constant."""
-        self._ensure_query_caches()
-        x_min, x_max, y_min, y_max = bounds
-        nx, ny = resolution
-        return self._sys.find_cells_grid_z(z, x_min, x_max, y_min, y_max, nx, ny,
-                                           universe_depth=universe_depth,
-                                           detect_errors=detect_errors)
+    def find_cells_grid(self, origin=None, normal=None, up=None, bounds=None,
+                        resolution=(100, 100), universe_depth=-1, detect_errors=False,
+                        *, z=None, y=None, x=None):
+        """Sample cells/materials on a 2D grid for an axis-aligned or arbitrary slice.
 
-    def find_cells_grid_y(self, y, bounds, resolution=(100, 100),
-                          universe_depth=-1, detect_errors=False):
-        """Sample cells on a grid for XZ slice at y=constant."""
+        Specify exactly one of:
+        - ``z`` for an XY slice at z=constant
+        - ``y`` for an XZ slice at y=constant
+        - ``x`` for a YZ slice at x=constant
+        - ``origin`` and ``normal`` for an arbitrary plane
+        """
         self._ensure_query_caches()
-        x_min, x_max, z_min, z_max = bounds
-        nx, nz = resolution
-        return self._sys.find_cells_grid_y(y, x_min, x_max, z_min, z_max, nx, nz,
-                                           universe_depth=universe_depth,
-                                           detect_errors=detect_errors)
 
-    def find_cells_grid_x(self, x, bounds, resolution=(100, 100),
-                          universe_depth=-1, detect_errors=False):
-        """Sample cells on a grid for YZ slice at x=constant."""
-        self._ensure_query_caches()
-        y_min, y_max, z_min, z_max = bounds
-        ny, nz = resolution
-        return self._sys.find_cells_grid_x(x, y_min, y_max, z_min, z_max, ny, nz,
-                                           universe_depth=universe_depth,
-                                           detect_errors=detect_errors)
+        plane_count = sum(value is not None for value in (z, y, x))
+        has_arbitrary_plane = origin is not None or normal is not None
+        if plane_count + int(has_arbitrary_plane) != 1:
+            raise ValueError("Specify exactly one of z, y, x, or origin+normal")
+        if bounds is None:
+            raise ValueError("bounds is required")
 
-    def find_cells_grid(self, origin, normal, up, bounds,
-                        resolution=(100, 100), universe_depth=-1, detect_errors=False):
-        """Sample cells on a grid for arbitrary plane slice."""
-        self._ensure_query_caches()
+        if z is not None:
+            x_min, x_max, y_min, y_max = bounds
+            nx, ny = resolution
+            return self._sys.find_cells_grid_z(z, x_min, x_max, y_min, y_max, nx, ny,
+                                               universe_depth=universe_depth,
+                                               detect_errors=detect_errors)
+
+        if y is not None:
+            x_min, x_max, z_min, z_max = bounds
+            nx, nz = resolution
+            return self._sys.find_cells_grid_y(y, x_min, x_max, z_min, z_max, nx, nz,
+                                               universe_depth=universe_depth,
+                                               detect_errors=detect_errors)
+
+        if x is not None:
+            y_min, y_max, z_min, z_max = bounds
+            ny, nz = resolution
+            return self._sys.find_cells_grid_x(x, y_min, y_max, z_min, z_max, ny, nz,
+                                               universe_depth=universe_depth,
+                                               detect_errors=detect_errors)
+
+        if origin is None or normal is None:
+            raise ValueError("origin and normal are required for an arbitrary plane")
+        if up is None:
+            up = (0, 0, 1)
         u_min, u_max, v_min, v_max = bounds
         nu, nv = resolution
         return self._sys.find_cells_grid(origin, normal, up, u_min, u_max, v_min, v_max, nu, nv,

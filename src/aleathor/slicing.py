@@ -5,8 +5,8 @@
 """DRY helpers for slice parameter extraction, label positioning, and overlap checking.
 
 These functions extract a uniform (nu, nv, origin, normal, up, bounds) tuple
-from the different grid result dicts returned by find_cells_grid_z/y/x and
-find_cells_grid (arbitrary plane).  Three public functions delegate here:
+from grid result dicts returned by Model.find_cells_grid(). Three public
+functions delegate here:
 
 - find_label_positions
 - find_surface_label_positions
@@ -111,7 +111,7 @@ def find_label_positions(
 
     Args:
         model: The Model (unused currently, reserved for future use).
-        grid_result: Dict returned by find_cells_grid_z/y/x or find_cells_grid.
+        grid_result: Dict returned by Model.find_cells_grid().
         min_pixels: Minimum pixel count for a region to get a label.
         by_material: If True, group by material_id instead of cell_id.
 
@@ -141,7 +141,7 @@ def find_surface_label_positions(
 
     Args:
         model: The Model (used to access the underlying system).
-        grid_result: Dict returned by find_cells_grid_z/y/x or find_cells_grid.
+        grid_result: Dict returned by Model.find_cells_grid().
         margin: Minimum distance (in pixels) from grid edge for labels.
 
     Returns:
@@ -177,7 +177,7 @@ def check_grid_overlaps(
 
     Args:
         model: The Model (unused currently, reserved for future use).
-        grid_result: Dict returned by find_cells_grid_* with detect_errors=True.
+        grid_result: Dict returned by Model.find_cells_grid() with detect_errors=True.
         universe_depth: Passed through if re-querying is needed (not used
             currently — the errors are taken from the grid_result directly).
 

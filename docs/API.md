@@ -303,11 +303,11 @@ Return a dict with `'curves'` (list of curve dicts, each with `'type'`, `'surfac
 ### Grid Queries
 
 ```python
-model.find_cells_grid_z(z, bounds, resolution=(100,100),
+model.find_cells_grid(z=z, bounds=bounds, resolution=(100,100),
                          universe_depth=-1, detect_errors=False) -> dict
-model.find_cells_grid_y(y, bounds, ...) -> dict
-model.find_cells_grid_x(x, bounds, ...) -> dict
-model.find_cells_grid(origin, normal, up, bounds, ...) -> dict
+model.find_cells_grid(y=y, bounds=bounds, ...) -> dict
+model.find_cells_grid(x=x, bounds=bounds, ...) -> dict
+model.find_cells_grid(origin=origin, normal=normal, up=up, bounds=bounds, ...) -> dict
 ```
 
 Sample cell/material IDs on a 2D pixel grid. Returns a dict with:
@@ -728,7 +728,7 @@ model.add_graveyard(voids)
 
 ## Spatial Indexing
 
-Query methods (`cell_at`, `trace`, `find_cells_grid_*`, `get_cells_in_bbox`, `estimate_*`, `plot`) build their acceleration caches lazily on first use. There is no public preparation entry point — you do not need to call anything before issuing queries.
+Query methods (`cell_at`, `trace`, `find_cells_grid`, `get_cells_in_bbox`, `estimate_*`, `plot`) build their acceleration caches lazily on first use. There is no public preparation entry point — you do not need to call anything before issuing queries.
 
 ### model.build_spatial_index
 

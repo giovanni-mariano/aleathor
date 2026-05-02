@@ -188,7 +188,7 @@ print("=" * 60)
 # Get analytical data for a slice
 bounds = (-12, 12, -12, 12)
 curves = model.get_slice_curves_z(0, bounds)
-grid = model.find_cells_grid_z(0, bounds, resolution=(100, 100))
+grid = model.find_cells_grid(z=0, bounds=bounds, resolution=(100, 100))
 
 # Count using the helper functions
 from aleathor import count_cells, count_surfaces, count_materials, get_slice_stats

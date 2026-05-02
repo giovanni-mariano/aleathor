@@ -192,8 +192,8 @@ If you need the raw data instead of a plot:
 
 ```python
 # Grid: cell/material IDs at each pixel
-grid = model.find_cells_grid_z(0, (-100, 100, -100, 100),
-                                resolution=(800, 800))
+grid = model.find_cells_grid(z=0, bounds=(-100, 100, -100, 100),
+                             resolution=(800, 800))
 cell_ids = grid['cell_ids']       # Flat list, 640000 elements
 material_ids = grid['material_ids']
 
@@ -210,17 +210,17 @@ The `universe_depth` parameter controls which level of the hierarchy you see:
 - `N`: cells at depth N
 
 ```python
-grid = model.find_cells_grid_z(0, (-100, 100, -100, 100),
-                                resolution=(400, 400),
-                                universe_depth=0)
+grid = model.find_cells_grid(z=0, bounds=(-100, 100, -100, 100),
+                             resolution=(400, 400),
+                             universe_depth=0)
 ```
 
 ### Error detection
 
 ```python
-grid = model.find_cells_grid_z(0, (-100, 100, -100, 100),
-                                resolution=(200, 200),
-                                detect_errors=True)
+grid = model.find_cells_grid(z=0, bounds=(-100, 100, -100, 100),
+                             resolution=(200, 200),
+                             detect_errors=True)
 # grid['errors'] contains: 0=ok, 1=overlap, 2=undefined
 
 # For thorough validation (rechecks every pixel):

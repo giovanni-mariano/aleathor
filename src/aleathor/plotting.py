@@ -343,7 +343,7 @@ def plot_slice_filled(grid_result: Dict[str, Any],
     than using analytical curves for contour display.
 
     Args:
-        grid_result: Result from sys.find_cells_grid_z/y/x (with detect_errors=True for error display)
+        grid_result: Result from model.find_cells_grid() (with detect_errors=True for error display)
         ax: Matplotlib axes
         cmap: Colormap name for geometry fill
         by_material: Color by material ID instead of cell ID
@@ -616,7 +616,7 @@ CELL_VOID = -1
 CELL_UNDEFINED = -2
 CELL_OVERLAP = -3
 
-# Grid error codes (from find_cells_grid_*_ex with detect_errors=True)
+# Grid error codes (from find_cells_grid with detect_errors=True)
 GRID_ERROR_OK = 0          # No error - valid cell
 GRID_ERROR_OVERLAP = 1     # Multiple cells claim this point
 GRID_ERROR_UNDEFINED = 2   # No cell claims this point
@@ -895,7 +895,7 @@ def count_cells(grid_result: Dict[str, Any]) -> int:
     """Count unique cells in a slice from grid sampling.
 
     Args:
-        grid_result: Result from find_cells_grid_*
+        grid_result: Result from find_cells_grid()
 
     Returns:
         Number of unique cells in the slice (excluding void)
@@ -910,7 +910,7 @@ def count_materials(grid_result: Dict[str, Any]) -> int:
     """Count unique materials in a slice from grid sampling.
 
     Args:
-        grid_result: Result from find_cells_grid_*
+        grid_result: Result from find_cells_grid()
 
     Returns:
         Number of unique materials in the slice (excluding void)
@@ -928,7 +928,7 @@ def get_slice_stats(curves_result: Dict[str, Any],
 
     Args:
         curves_result: Result from get_slice_curves_*
-        grid_result: Result from find_cells_grid_*
+        grid_result: Result from find_cells_grid()
 
     Returns:
         Dict with 'cells', 'surfaces', 'materials' counts
@@ -1038,29 +1038,29 @@ def plot(model: 'Model',
     # Get grid resolution
     resolution = kwargs.pop('resolution', (100, 100))
 
-    # Get grid data for the slice — use Model's axis-specific methods
+    # Get grid data for the slice.
     if z is not None:
-        grid = model.find_cells_grid_z(z, bounds, resolution,
-                                       universe_depth=universe_depth,
-                                       detect_errors=detect_errors)
+        grid = model.find_cells_grid(z=z, bounds=bounds, resolution=resolution,
+                                     universe_depth=universe_depth,
+                                     detect_errors=detect_errors)
         xlabel, ylabel = 'X', 'Y'
         title = f'Z = {z}'
     elif y is not None:
-        grid = model.find_cells_grid_y(y, bounds, resolution,
-                                       universe_depth=universe_depth,
-                                       detect_errors=detect_errors)
+        grid = model.find_cells_grid(y=y, bounds=bounds, resolution=resolution,
+                                     universe_depth=universe_depth,
+                                     detect_errors=detect_errors)
         xlabel, ylabel = 'X', 'Z'
         title = f'Y = {y}'
     elif x is not None:
-        grid = model.find_cells_grid_x(x, bounds, resolution,
-                                       universe_depth=universe_depth,
-                                       detect_errors=detect_errors)
+        grid = model.find_cells_grid(x=x, bounds=bounds, resolution=resolution,
+                                     universe_depth=universe_depth,
+                                     detect_errors=detect_errors)
         xlabel, ylabel = 'Y', 'Z'
         title = f'X = {x}'
     elif origin is not None and normal is not None:
         if up is None:
             up = (0, 0, 1)
-        grid = model.find_cells_grid(origin, normal, up, bounds, resolution,
+        grid = model.find_cells_grid(origin=origin, normal=normal, up=up, bounds=bounds, resolution=resolution,
                                      universe_depth=universe_depth,
                                      detect_errors=detect_errors)
         xlabel, ylabel = 'U', 'V'

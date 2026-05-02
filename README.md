@@ -212,6 +212,10 @@ aleathor was specifically designed for debugging Tokamak-scale fusion reactor mo
 
 ## Documentation
 
+The GitHub Pages documentation site is configured at:
+
+https://giovanni-mariano.github.io/aleathor/
+
 | Document | Audience | Purpose |
 |----------|----------|---------|
 | [Tutorial](docs/TUTORIAL.md) | New users | Walk-through from loading a model to exporting results |

@@ -1,0 +1,36 @@
+# SPDX-FileCopyrightText: 2026 Giovanni MARIANO
+#
+# SPDX-License-Identifier: MPL-2.0
+
+site_name: aleathor
+site_description: Constructive Solid Geometry tools for nuclear simulation model debugging, visualization, and analysis.
+site_url: https://giovanni-mariano.github.io/aleathor/
+repo_url: https://github.com/giovanni-mariano/aleathor
+repo_name: giovanni-mariano/aleathor
+
+theme:
+  name: material
+  features:
+    - navigation.sections
+    - navigation.indexes
+    - navigation.top
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+
+nav:
+  - Home: index.md
+  - Tutorial: TUTORIAL.md
+  - Concepts: CONCEPTS.md
+  - API Reference: API.md
+  - Architecture: ARCHITECTURE.md
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - pymdownx.highlight
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
+  - tables

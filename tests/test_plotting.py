@@ -88,7 +88,7 @@ class TestPlotSliceFilled:
         import matplotlib.pyplot as plt
         from aleathor import plot_slice_filled
 
-        grid = simple_model.find_cells_grid_z(0, bounds_xy, resolution=(20, 20))
+        grid = simple_model.find_cells_grid(z=0, bounds=bounds_xy, resolution=(20, 20))
         ax = plot_slice_filled(grid)
 
         assert ax is not None
@@ -99,7 +99,7 @@ class TestPlotSliceFilled:
         import matplotlib.pyplot as plt
         from aleathor import plot_slice_filled
 
-        grid = simple_model.find_cells_grid_z(0, bounds_xy, resolution=(20, 20))
+        grid = simple_model.find_cells_grid(z=0, bounds=bounds_xy, resolution=(20, 20))
         ax = plot_slice_filled(grid, show_contours=True)
 
         plt.close('all')
@@ -109,7 +109,7 @@ class TestPlotSliceFilled:
         import matplotlib.pyplot as plt
         from aleathor import plot_slice_filled
 
-        grid = simple_model.find_cells_grid_z(0, bounds_xy, resolution=(20, 20))
+        grid = simple_model.find_cells_grid(z=0, bounds=bounds_xy, resolution=(20, 20))
         ax = plot_slice_filled(grid, show_contours=False)
 
         plt.close('all')
@@ -119,7 +119,7 @@ class TestPlotSliceFilled:
         import matplotlib.pyplot as plt
         from aleathor import plot_slice_filled
 
-        grid = simple_model.find_cells_grid_z(0, bounds_xy, resolution=(20, 20))
+        grid = simple_model.find_cells_grid(z=0, bounds=bounds_xy, resolution=(20, 20))
         ax = plot_slice_filled(grid, show_fill=False, show_contours=True)
 
         plt.close('all')
@@ -129,7 +129,7 @@ class TestPlotSliceFilled:
         import matplotlib.pyplot as plt
         from aleathor import plot_slice_filled
 
-        grid = simple_model.find_cells_grid_z(0, bounds_xy, resolution=(20, 20))
+        grid = simple_model.find_cells_grid(z=0, bounds=bounds_xy, resolution=(20, 20))
         ax = plot_slice_filled(grid, by_material=True)
 
         plt.close('all')
@@ -139,7 +139,7 @@ class TestPlotSliceFilled:
         import matplotlib.pyplot as plt
         from aleathor import plot_slice_filled
 
-        grid = simple_model.find_cells_grid_z(0, bounds_xy, resolution=(20, 20))
+        grid = simple_model.find_cells_grid(z=0, bounds=bounds_xy, resolution=(20, 20))
         ax = plot_slice_filled(grid, show_colorbar=True)
 
         plt.close('all')
@@ -149,7 +149,7 @@ class TestPlotSliceFilled:
         import matplotlib.pyplot as plt
         from aleathor import plot_slice_filled
 
-        grid = simple_model.find_cells_grid_z(0, bounds_xy, resolution=(20, 20))
+        grid = simple_model.find_cells_grid(z=0, bounds=bounds_xy, resolution=(20, 20))
         ax = plot_slice_filled(grid, cmap='viridis')
 
         plt.close('all')
@@ -293,7 +293,7 @@ class TestContourBy:
         import matplotlib.pyplot as plt
         from aleathor import plot_slice_filled
 
-        grid = simple_model.find_cells_grid_z(0, bounds_xy, resolution=(20, 20))
+        grid = simple_model.find_cells_grid(z=0, bounds=bounds_xy, resolution=(20, 20))
         ax = plot_slice_filled(grid, contour_by='cell')
         assert ax is not None
         plt.close('all')
@@ -303,7 +303,7 @@ class TestContourBy:
         import matplotlib.pyplot as plt
         from aleathor import plot_slice_filled
 
-        grid = simple_model.find_cells_grid_z(0, bounds_xy, resolution=(20, 20))
+        grid = simple_model.find_cells_grid(z=0, bounds=bounds_xy, resolution=(20, 20))
         ax = plot_slice_filled(grid, contour_by='material')
         assert ax is not None
         plt.close('all')
@@ -314,7 +314,7 @@ class TestContourBy:
         import numpy as np
         from aleathor import plot_slice_filled
 
-        grid = simple_model.find_cells_grid_z(0, bounds_xy, resolution=(20, 20))
+        grid = simple_model.find_cells_grid(z=0, bounds=bounds_xy, resolution=(20, 20))
         # by_material=True with default contour_by should not raise
         ax = plot_slice_filled(grid, by_material=True)
         assert ax is not None
@@ -325,7 +325,7 @@ class TestContourBy:
         import matplotlib.pyplot as plt
         from aleathor import plot_slice_filled
 
-        grid = simple_model.find_cells_grid_z(0, bounds_xy, resolution=(20, 20))
+        grid = simple_model.find_cells_grid(z=0, bounds=bounds_xy, resolution=(20, 20))
         ax = plot_slice_filled(grid, by_material=True, contour_by='cell')
         assert ax is not None
         plt.close('all')
@@ -334,7 +334,7 @@ class TestContourBy:
         """Should raise ValueError for invalid contour_by value."""
         from aleathor import plot_slice_filled
 
-        grid = simple_model.find_cells_grid_z(0, bounds_xy, resolution=(20, 20))
+        grid = simple_model.find_cells_grid(z=0, bounds=bounds_xy, resolution=(20, 20))
         with pytest.raises(ValueError, match="contour_by"):
             plot_slice_filled(grid, contour_by='invalid')
 
@@ -344,7 +344,7 @@ class TestContourBy:
         import numpy as np
         from aleathor import plot_slice_filled
 
-        grid = simple_model.find_cells_grid_z(0, bounds_xy, resolution=(20, 20))
+        grid = simple_model.find_cells_grid(z=0, bounds=bounds_xy, resolution=(20, 20))
         overlay = np.random.rand(20, 20)
         ax = plot_slice_filled(grid, overlay=overlay)
         assert ax is not None
