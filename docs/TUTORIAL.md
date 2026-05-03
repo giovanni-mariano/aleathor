@@ -92,7 +92,6 @@ If you already know the cell ID:
 cell = model[1]              # Same as model.get_cell(1)
 print(cell.material)
 print(cell.bounds)
-print(cell.expr())           # MCNP-style CSG expression
 ```
 
 ## 4. Filter Cells
@@ -114,7 +113,7 @@ print(model.cells.materials())
 print(model.cells.universes())
 ```
 
-The lower-level methods `get_cells_by_material()`, `get_cells_by_universe()`, and `get_cells_in_bbox()` return C cell indices. For user code, prefer `model.cells`.
+Prefer `model.cells` for user code; it returns `Cell` views rather than backend indices.
 
 ## 5. Plot Slices
 
@@ -154,7 +153,6 @@ grid = model.find_cells_grid(
 cell_ids = grid["cell_ids"]
 material_ids = grid["material_ids"]
 
-curves = model.get_slice_curves_z(0, (-10, 10, -10, 10))
 ```
 
 For arbitrary planes, use `origin`, `normal`, and optionally `up`:
@@ -225,11 +223,10 @@ You can also update through the model:
 model.update_cell(1, material=3, density=7.8)
 ```
 
-FILL can be changed with either `cell.fill` or `model.set_fill()`:
+FILL can be changed through the `Cell` view:
 
 ```python
 cell.fill = 5
-model.set_fill(cell_id=1, fill_universe=5)
 ```
 
 ## 8. Universes And FILLs
@@ -255,13 +252,7 @@ print([c.id for c in pin.cell_path_at(0, 0, 0)])
 
 ## 9. Export
 
-```python
-model.export_mcnp("geometry.inp")
-model.export_openmc("geometry.xml")
-model.export_serpent("geometry.serp")
-```
-
-Or use extension-based detection:
+Use `save()` and let aleathor choose the format from the extension:
 
 ```python
 model.save("geometry.inp")      # MCNP
@@ -284,7 +275,9 @@ model.save("geometry.xml")
 
 Always inspect and validate converted output before using it for production transport runs.
 
-## 10. Validation And Cleanup
+The explicit methods `export_mcnp()`, `export_openmc()`, and `export_serpent()` are also available when you do not want extension-based detection.
+
+## 10. Validation
 
 Overlap search is sampling-based:
 
@@ -304,15 +297,6 @@ grid = model.find_cells_grid(
 )
 
 errors = model.check_grid_overlaps(grid)
-```
-
-CSG cleanup helpers:
-
-```python
-stats = model.simplify()
-model.expand_macrobodies()
-model.tighten_bboxes(tolerance=1.0)
-model.tighten_bbox_numerical(cell_id=1)
 ```
 
 ## 11. Mesh Sampling And Export
@@ -352,12 +336,21 @@ model.export_mesh(
 )
 ```
 
-## 12. Logging And Configuration
+## 12. Advanced Operations
+
+These are useful once you are working on larger or imported models:
 
 ```python
-print(model.config)
-model.config = {"log_level": 3, "abs_tol": 1e-8}
+stats = model.simplify()
+model.expand_macrobodies()
+model.tighten_bboxes(tolerance=1.0)
+```
 
+`simplify()` rewrites CSG trees; `expand_macrobodies()` turns MCNP macrobodies into primitive surfaces where supported; `tighten_bboxes()` improves cell bounding boxes used by spatial queries.
+
+## 13. Logging
+
+```python
 ath.enable_logging()
 ath.set_log_level(ath.LOG_DEBUG)
 ath.disable_logging()
