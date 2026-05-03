@@ -161,7 +161,7 @@ except ImportError:
     def enable_logging(): pass
     def disable_logging(): pass
 
-# Optional plotting (requires matplotlib)
+# Plotting helpers
 try:
     from .plotting import (
         plot_slice_curves,

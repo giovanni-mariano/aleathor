@@ -26,12 +26,6 @@ cd aleathor
 pip install -e .
 ```
 
-For plotting support:
-
-```bash
-pip install -e ".[plot]"
-```
-
 ## Quick Example
 
 ```python

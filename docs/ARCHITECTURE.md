@@ -21,7 +21,7 @@ src/aleathor/
     geometry.py        Region classes (Halfspace, Intersection, Union, Complement)
     io.py              File I/O (read_mcnp, write_openmc, etc.)
     slicing.py         DRY helper for slice parameter extraction
-    plotting.py        matplotlib visualization (optional dependency)
+    plotting.py        matplotlib visualization
     _binding/
         aleathor_binding.c   CPython extension entry point
         _bind_*.c            Binding implementation split by feature area
@@ -184,7 +184,7 @@ Model methods that delegate to `slicing.py` are: `find_label_positions`, `find_s
 
 ## The Plotting Module
 
-`plotting.py` is separated from `model.py` because matplotlib is an optional dependency. The module is only imported when plotting is requested.
+`plotting.py` is separated from `model.py` to keep plotting code out of the core model object. The module is imported lazily when plotting is requested.
 
 The key functions are:
 
@@ -251,7 +251,7 @@ __init__.py  ─── re-exports public API
     │
     ├── io.py ──────── read_mcnp, write_openmc, _ImportedRegion
     │
-    └── plotting.py ── plot, plot_views, plot_slice_filled, ... (optional: matplotlib)
+    └── plotting.py ── plot, plot_views, plot_slice_filled, ...
 ```
 
 Dependencies flow downward. `plotting.py` depends on `model.py` (via `Model` type hints) but only through `TYPE_CHECKING` — no runtime import cycle. `slicing.py` similarly uses `TYPE_CHECKING` for the `Model` type.

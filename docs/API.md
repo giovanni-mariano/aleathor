@@ -367,7 +367,7 @@ Comprehensive overlap detection: re-queries every non-void pixel. Returns update
 
 ## Plotting
 
-Requires `matplotlib` and `numpy`. Import check: `ath.HAS_PLOTTING`.
+Plotting uses `matplotlib` and `numpy`, which are installed as regular package dependencies. Import check: `ath.HAS_PLOTTING`.
 
 ### model.plot
 

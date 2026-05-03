@@ -81,7 +81,7 @@ pip install -e .
 - Python >= 3.9
 - C compiler (gcc or clang)
 - Make
-- Optional: matplotlib, numpy (for plotting)
+- matplotlib and numpy are installed with aleathor for plotting
 
 ### Build options
 
