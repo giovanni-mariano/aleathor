@@ -59,22 +59,22 @@ else:
     print("Point is in void or undefined")
 ```
 
-`cell_at()` returns a `Cell` — a lightweight read-only view of the cell. It traverses the full universe hierarchy: if the point is in a cell that has a FILL, it descends into the filled universe and continues until it finds a terminal cell (one with a material or void, not another fill).
+`cell_at()` is the usual point-query method. It returns a `Cell` view for the terminal cell at that coordinate. If the point is inside a cell with a FILL, aleathor descends into the filled universe and continues until it reaches the innermost cell.
 
-Returns `None` if no cell claims the point. This means either void or a geometry error.
+Returns `None` if no cell claims the point. This means either void or an undefined region.
 
-### What about the full hierarchy?
+### When do I use `cell_path_at()`?
 
-For debugging universe fills, you often want to see every cell the point passes through:
+Use `cell_path_at()` only when you need to inspect the universe hierarchy. It returns the full path from the outermost cell to the innermost cell:
 
 ```python
-cells = model.cells_at(650.0, 0.0, 0.0)
+cells = model.cell_path_at(650.0, 0.0, 0.0)
 for cell in cells:
     print(f"  depth {cell.depth}: cell {cell.id}, "
           f"universe {cell.universe}, material {cell.material}")
 ```
 
-Each `Cell` in the list has its `depth` set — 0 for root-level cells, increasing with nesting.
+Each `Cell` in the list has its `depth` set. In a flat model, `cell_path_at()` normally returns the same cell as `cell_at()`, wrapped in a one-item list. In a nested FILL model, it shows each parent cell and the final terminal cell.
 
 ### Using subscript notation
 
@@ -308,8 +308,8 @@ fuel = -sphere                # Inside sphere
 moderator = -box & +sphere    # Inside box AND outside sphere
 
 # Add cells
-model.add_cell(fuel, material=1, density=-10.5, name="fuel")
-model.add_cell(moderator, material=2, density=-1.0, name="moderator")
+model.add_cell(fuel, material=1, density=10.5, name="fuel")
+model.add_cell(moderator, material=2, density=1.0, name="moderator")
 ```
 
 ### Boolean operators
@@ -372,9 +372,9 @@ model = ath.Model()
 fuel_surf = ath.Sphere(0, 0, 0, radius=0.5)
 clad_surf = ath.CylinderZ(0, 0, radius=0.6)
 
-model.add_cell(-fuel_surf, material=1, density=-10.0,
+model.add_cell(-fuel_surf, material=1, density=10.0,
                universe=1, name="fuel")
-model.add_cell(-clad_surf & +fuel_surf, material=2, density=-6.5,
+model.add_cell(-clad_surf & +fuel_surf, material=2, density=6.5,
                universe=1, name="clad")
 
 # Container in universe 0 filled with universe 1
@@ -411,7 +411,7 @@ print(mcnp_text)
 
 ### Format conversion
 
-Converting between MCNP and OpenMC is a two-liner:
+Converting between MCNP and OpenMC uses the same load/save API, but the conversion path is still alpha and should be validated on the exported model:
 
 ```python
 # MCNP to OpenMC

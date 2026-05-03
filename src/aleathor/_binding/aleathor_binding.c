@@ -460,7 +460,7 @@ static PyMethodDef AleaTHORSystem_methods[] = {
     {"export_mcnp", (PyCFunction)AleaTHORSystem_export_mcnp,
      METH_VARARGS | METH_KEYWORDS,
      "export_mcnp(filename, deduplicate=True, universe_depth=-1, fill_depth=0)\n\n"
-     "Export to MCNP format.\n\n"
+     "Low-level MCNP export. The public Python API is Model.export_mcnp(filename).\n\n"
      "Args:\n"
      "  filename: Output file path\n"
      "  deduplicate: Deduplicate surfaces (default True)\n"

@@ -811,13 +811,13 @@ class Model:
     # Queries
     # =========================================================================
 
-    def cells_at(self, x: float, y: float, z: float) -> List[Cell]:
-        """Find all cells containing a point across hierarchy depths.
+    def cell_path_at(self, x: float, y: float, z: float) -> List[Cell]:
+        """Return the containment path for a point across hierarchy depths.
 
-        Returns cells at all levels of the universe hierarchy, ordered
-        by depth (depth=0 outermost). This is essential for hierarchical
-        FILL geometries where multiple cells contain the same point at
-        different nesting levels.
+        Returns cells at all levels of the universe hierarchy, ordered by
+        depth (depth=0 outermost). This is useful for debugging hierarchical
+        FILL geometries where a point is contained by parent cells before the
+        terminal cell returned by ``cell_at``.
 
         Args:
             x, y, z: Point coordinates
@@ -827,7 +827,7 @@ class Model:
             has its depth property set. Empty list if point is in void.
 
         Example:
-            cells = model.cells_at(0, 0, 0)
+            cells = model.cell_path_at(0, 0, 0)
             for cell in cells:
                 print(f"depth={cell.depth}: cell {cell.id}, material {cell.material}")
         """

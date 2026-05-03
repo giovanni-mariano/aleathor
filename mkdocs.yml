@@ -20,6 +20,7 @@ theme:
 
 nav:
   - Home: index.md
+  - Current Status: STATUS.md
   - Tutorial: TUTORIAL.md
   - Concepts: CONCEPTS.md
   - API Reference: API.md

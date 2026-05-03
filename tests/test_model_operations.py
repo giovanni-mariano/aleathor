@@ -50,6 +50,30 @@ class TestCellFiltering:
         assert isinstance(cells, list)
 
 
+class TestPointQueryApi:
+    """Tests for point-query API names."""
+
+    def test_cell_at_returns_terminal_cell(self, simple_model):
+        """cell_at is the normal point query."""
+        cell = simple_model.cell_at(0, 0, 0)
+
+        assert cell is not None
+        assert cell.id == 1
+        assert cell.material == 1
+
+    def test_cell_path_at_returns_depth_ordered_path(self, simple_model):
+        """cell_path_at exposes the hierarchy path."""
+        cells = simple_model.cell_path_at(0, 0, 0)
+
+        assert len(cells) == 1
+        assert cells[0].id == simple_model.cell_at(0, 0, 0).id
+        assert cells[0].depth == 0
+
+    def test_cells_at_is_not_public_api(self, simple_model):
+        """The old plural name was intentionally removed."""
+        assert not hasattr(simple_model, "cells_at")
+
+
 class TestSpatialIndexing:
     """Tests for spatial indexing methods."""
 

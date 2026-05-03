@@ -93,6 +93,7 @@ model.add_cell(
     cell_id: int = None,      # Auto-assigned if None
     material: int = 0,         # 0 = void
     density: float = 0.0,
+    density_unit: str = "g/cm3",
     name: str = None,
     universe: int = 0,
     fill: int = None,          # Universe to fill with
@@ -100,7 +101,7 @@ model.add_cell(
 ) -> Cell
 ```
 
-Add a cell to the model. Returns the created `Cell` dataclass. Raises `ValueError` if `cell_id` already exists.
+Add a cell to the model and push it to the C backend. `density` is passed as a positive magnitude; `density_unit` controls whether it is stored as mass density (`"g/cm3"`, negative in MCNP syntax) or atom density (`"atoms/b-cm"`, positive in MCNP syntax). Returns a `Cell` view.
 
 ### model.get_cell
 
@@ -118,11 +119,12 @@ model.update_cell(
     cell_id: int,
     material: int = None,     # None = keep current
     density: float = None,
+    density_unit: str = None,
     importance: float = None,
 ) -> Cell
 ```
 
-Update cell properties. Only provided fields are changed. Marks the model dirty. Returns a fresh `Cell`. Raises `KeyError` if not found.
+Update cell properties in the C backend. Only provided fields are changed. Returns a fresh `Cell`. Raises `KeyError` if not found.
 
 ### model.remove_cell
 
@@ -142,8 +144,7 @@ Remove cell by ID. No-op if not found.
 model.add_material(
     material_id: int,
     name: str = None,
-    density: float = 0.0,
-    composition: Dict[str, float] = None,
+    density: float = None,
 ) -> Material
 ```
 
@@ -190,21 +191,27 @@ model.get_universe(universe_id: int) -> Universe
 
 ## Point Queries
 
+Most code should use `cell_at()`. Use `cell_path_at()` only when you need to inspect the nested universe path that led to the returned cell.
+
 ### model.cell_at
 
 ```python
 model.cell_at(x: float, y: float, z: float) -> Optional[Cell]
 ```
 
-Find the innermost cell containing the point. Traverses the full universe hierarchy. Returns `None` if the point is in void or undefined.
+Find the terminal cell containing the point. This is the normal point query: it follows universe fills and returns the innermost cell reached by that traversal. Returns `None` if no cell claims the point.
 
-### model.cells_at
+Use this for questions like "which cell/material contains this coordinate?"
+
+### model.cell_path_at
 
 ```python
-model.cells_at(x: float, y: float, z: float) -> List[Cell]
+model.cell_path_at(x: float, y: float, z: float) -> List[Cell]
 ```
 
-Find **all** cells containing the point across all hierarchy depths, ordered by depth (0 = outermost). Each `Cell` has its `depth` property set.
+Return the containment path through nested universes. Results are ordered by depth, where `0` is the outermost/root-level cell. Each `Cell` has its `depth` property set.
+
+Use this for debugging FILL/universe nesting. In a non-nested model, this usually returns either an empty list or a one-cell list.
 
 ### model.contains_point
 
@@ -506,13 +513,19 @@ model.export_mcnp(filename: str) -> None
 model.export_openmc(filename: str) -> None
 ```
 
+### model.export_serpent
+
+```python
+model.export_serpent(filename: str) -> None
+```
+
 ### model.save
 
 ```python
 model.save(filename: str, format: str = None) -> None
 ```
 
-Auto-detects format from extension. `.xml` = OpenMC, everything else = MCNP. Override with `format='mcnp'` or `format='openmc'`.
+Auto-detects format from extension. `.xml` = OpenMC, `.serp`/`.sss`/`.serpent` = Serpent, everything else = MCNP. Override with `format='mcnp'`, `format='openmc'`, or `format='serpent'`.
 
 ### model.to_mcnp_string
 
@@ -525,8 +538,9 @@ Generate MCNP input file contents as a string.
 ### File-level I/O functions
 
 ```python
-ath.write_mcnp(model, filename, deduplicate=True) -> None
+ath.write_mcnp(model, filename) -> None
 ath.write_openmc(model, filename) -> None
+ath.write_serpent(model, filename) -> None
 ```
 
 ---
@@ -878,7 +892,6 @@ Collection of cells with filtering.
 
 ```python
 len(collection)                    # Number of cells
-collection[0]                      # First Cell
 collection[cell_id]                # Cell by ID
 for cell in collection: ...        # Iterate Cells
 cell_view in collection            # Membership test
@@ -1051,38 +1064,22 @@ region.get_surfaces()        # Set of all referenced surfaces
 
 ---
 
-## Dataclass: Material
+## Material
 
 ```python
-@dataclass
-class Material:
-    id: int                           # Must be positive
-    name: Optional[str] = None
-    density: float = 0.0
-    composition: Dict[str, float] = {}
+mat = model.add_material(1, name="Steel", density=7.8)
+mat.add_element(26, 0.70)
+mat.add_nuclide(26056, 0.90)
+mat.expand_elements()
 ```
 
----
-
-## Dataclass: _CellData
-
-Internal representation used when building geometry programmatically. Users interact with the `Cell` class (in `collections.py`) for the public API.
-
 ```python
-@dataclass
-class _CellData:
-    id: int                           # Must be positive
-    region: Region
-    material: int = 0                 # 0 = void
-    density: float = 0.0
-    name: Optional[str] = None
-    universe: int = 0
-    fill: Optional[int] = None
-    fill_transform: Optional[int] = None
-    importance: float = 1.0
-
-    is_void: bool      # Property: material == 0
-    is_filled: bool    # Property: fill is not None
+mat.id: int
+mat.name: Optional[str]
+mat.density: Optional[float]
+mat.weight_fractions: bool
+mat.nuclides: List[dict]
+mat.elements: List[dict]
 ```
 
 ---
@@ -1094,9 +1091,9 @@ class _CellData:
 class Universe:
     id: int
     name: Optional[str] = None
-    cells: List[Cell] = []
+    cells: list = []  # Internal cell records for programmatic universes
 
-    def add_cell(cell: Cell) -> None
+    def add_cell(cell) -> None
 ```
 
 ---

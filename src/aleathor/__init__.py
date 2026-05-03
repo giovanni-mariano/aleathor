@@ -18,9 +18,9 @@ Example:
 
     # Create model
     model = ath.Model()
-    model.add_cell(fuel, material=1, density=-10.5, name="fuel")
-    model.add_cell(clad, material=2, density=-6.5, name="clad")
-    model.add_cell(water, material=3, density=-1.0, name="water")
+    model.add_cell(fuel, material=1, density=10.5, name="fuel")
+    model.add_cell(clad, material=2, density=6.5, name="clad")
+    model.add_cell(water, material=3, density=1.0, name="water")
 
     # Export
     model.export_mcnp("geometry.inp")

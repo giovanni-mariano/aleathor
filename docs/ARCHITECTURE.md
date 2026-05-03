@@ -15,7 +15,7 @@ aleathor Python is a thin layer over a C geometry engine ([libalea](https://gith
 ```
 src/aleathor/
     __init__.py        Public API surface, optional imports
-    model.py           Model class — main container
+    model.py           Model, Material, Universe, and C-backed model operations
     collections.py     Cell, CellCollection, TraceResult, TraceSegment
     surfaces.py        Surface classes (Sphere, Box, CylinderZ, etc.)
     geometry.py        Region classes (Halfspace, Intersection, Union, Complement)
@@ -23,35 +23,38 @@ src/aleathor/
     slicing.py         DRY helper for slice parameter extraction
     plotting.py        matplotlib visualization (optional dependency)
     _binding/
-        aleathor_binding.c   CPython extension module
+        aleathor_binding.c   CPython extension entry point
+        _bind_*.c            Binding implementation split by feature area
 ```
 
 The C extension (`_alea`) is a CPython module that wraps `libalea` functions into Python-callable methods on a `System` class. The Python `Model` class owns a `System` instance (`model._sys`) and manages the translation between Python objects and C data.
 
-## Dual Representation
+## Model State
 
-The `Model` class maintains two parallel representations of the geometry:
+The `Model` class is C-backed. Geometry cells are pushed into `_sys` as soon as they are added, and queries operate on `_sys`. Python keeps lightweight side metadata for information that is not fully owned by the C system.
 
 ```
-Model
-├── Python side                     C side
-│   ├── _cells: Dict[int, Cell]     _sys: _alea.System
-│   ├── _surfaces: Dict[int, Surface]   (contains all nodes, primitives,
-│   ├── _materials: Dict[int, Material]   cells, surfaces, materials,
-│   └── _universes: Dict[int, Universe]   acceleration structures)
-│
-└── _dirty: bool   ← links the two sides
+Model                         C side
+├── _sys: _alea.System   ───► cells, CSG nodes, primitives, materials,
+│                            fills, universes, and acceleration structures
+├── _regions: Dict[int, Region]      Python region or imported-region view
+├── _surfaces: Dict[int, Surface]    Python-created surfaces by ID
+├── _materials: Dict[int, Material]  Material wrappers by material ID
+├── _names: Dict[int, str]           Python-side cell names
+└── _importances: Dict[int, float]   Python-side importance metadata
 ```
 
 ### When you build geometry in Python
 
 ```python
-model.add_cell(region=-sphere, material=1, density=-10.5)
+model.add_cell(region=-sphere, material=1, density=10.5)
 ```
 
-1. A `Cell` dataclass is created and stored in `model._cells`
-2. The `_dirty` flag is set to `True`
-3. No C data is created yet
+1. `region._to_csg(model)` creates or reuses C CSG nodes.
+2. The material is ensured in the C material table.
+3. `_sys.add_cell(...)` creates the C-backed cell immediately.
+4. Python stores metadata such as name, importance, region, and surfaces.
+5. A `Cell` view is returned.
 
 ### When you query the geometry
 
@@ -59,11 +62,9 @@ model.add_cell(region=-sphere, material=1, density=-10.5)
 cell = model.cell_at(0, 0, 0)
 ```
 
-1. `_rebuild_if_needed()` checks `_dirty`
-2. If dirty: resets `_sys`, iterates `_cells`, calls `region._to_csg(model)` to build the C CSG tree, adds each cell to the C system, builds the universe index
-3. Clears `_dirty`
-4. Calls `_sys.find_cell(x, y, z)` — pure C computation
-5. Returns a `Cell` wrapping the result
+1. `_ensure_query_caches()` prepares universe, spatial, raycast, and slice caches if needed.
+2. `_sys.find_cell(x, y, z)` performs the C query.
+3. The returned cell index is wrapped in a `Cell` object.
 
 ### When you load from a file
 
@@ -71,29 +72,25 @@ cell = model.cell_at(0, 0, 0)
 model = ath.read_mcnp("geometry.inp")
 ```
 
-The C parser builds the system directly. The Python `_cells` dict stays **empty**. Cells use `_ImportedRegion` objects — lightweight wrappers that reference C system nodes by index. The model is **not dirty** (the C system is already built).
+The C parser builds the system directly. `_populate_regions()` then attaches `_ImportedRegion` wrappers to each loaded cell ID so users can inspect or reuse imported CSG regions from Python.
 
 This is important: loaded models don't duplicate geometry in Python. The `Cell` objects returned by queries go straight to the C system.
 
-## The _rebuild_if_needed() Cycle
+## Query Cache Lifecycle
 
 ```
-add_cell() / remove_cell() / update_cell()
+cell_at() / trace() / find_cells_grid() / plot()
         │
         ▼
-    _dirty = True
+    _ensure_query_caches()
         │
-        ▼ (on next query)
-    _rebuild_if_needed()
-        │
-        ├── _sys.reset()
-        ├── _halfspace_node_cache.clear()
-        ├── for each cell in _cells:
-        │       node_id = cell.region._to_csg(model)
-        │       _sys.add_cell(cell_id, node_id, material, density, universe)
         ├── _sys.build_universe_index()
-        └── _dirty = False
+        ├── _sys.build_spatial_index()
+        ├── _sys.prepare_raycast()
+        └── _sys.prepare_slice()
 ```
+
+The model no longer rebuilds all C cells from a Python `_cells` dictionary on each edit. Cell edits are applied directly to `_sys`; query preparation only builds acceleration structures.
 
 The cache `_halfspace_node_cache` maps `(surface_id, positive)` to C node IDs. This prevents recreating the same surface primitive when multiple cells reference it.
 
@@ -116,17 +113,9 @@ def _get_or_create_halfspace_node(self, surface, positive):
 
 Each `_surface()` call creates the C primitive and returns both sense nodes. Both are cached. When a cell references `-S5`, the cache returns the `neg_node` directly without creating anything.
 
-## _CellData vs Cell
+## Cell Views
 
-| | `_CellData` | `Cell` |
-|--|--------|------------|
-| Type | `@dataclass` | Regular class |
-| Storage | Python `_cells` dict | Created on demand |
-| Backed by | Python attributes | C system (by index) |
-| Mutable | Via direct attribute access | Via property setters (marks model dirty) |
-| When | Building geometry | Querying and mutating geometry |
-
-`Cell` (in `collections.py`) is the **public API type**. Users should never interact with `_CellData` directly. A `Cell` holds a reference to the `Model` and an integer index into the C system's cell array. Property access (`cell.material`, `cell.bounds`) calls into the C system. Property setters (`cell.material = 2`) update the Python `_CellData` and mark the model dirty.
+`Cell` (in `collections.py`) is the public API type. It holds a reference to the `Model`, an integer index into the C system's cell array, and optionally the original cell ID so it can resolve itself again after changes. Property access (`cell.material`, `cell.bounds`) reads from the C system. Property setters (`cell.material = 2`, `cell.density = 5.0`, `cell.fill = 10`) update the C system directly.
 
 ```python
 class Cell:
@@ -137,7 +126,7 @@ class Cell:
 
     @property
     def material(self):
-        return self._model._sys.cell_material(self._index)
+        return self._get_info()['material_id']
 ```
 
 ## CellCollection
@@ -213,17 +202,16 @@ def plot(self, z=None, y=None, x=None, **kwargs):
 
 ## _ImportedRegion
 
-When geometry is loaded from an MCNP file, cells reference `_ImportedRegion` objects instead of Python `Region` trees. An `_ImportedRegion` is a thin wrapper around a C system and cell index:
+When geometry is loaded from a file, cells reference `_ImportedRegion` objects instead of Python-created `Region` trees. An `_ImportedRegion` is a thin wrapper around a C system and CSG node ID:
 
 ```python
 class _ImportedRegion(Region):
-    def __init__(self, system, cell_index):
-        self._system = system
-        self._cell_index = cell_index
+    def __init__(self, sys, node_id):
+        self._sys = sys
+        self._node_id = node_id
 
     def _to_csg(self, model):
-        # Returns the existing C node ID — no rebuild needed
-        return self._system.cell_root_node(self._cell_index)
+        return self._node_id
 ```
 
 This is why loaded models are efficient: they don't duplicate the CSG tree in Python. The `_to_csg()` method returns the existing C node directly.
@@ -268,14 +256,14 @@ __init__.py  ─── re-exports public API
 
 Dependencies flow downward. `plotting.py` depends on `model.py` (via `Model` type hints) but only through `TYPE_CHECKING` — no runtime import cycle. `slicing.py` similarly uses `TYPE_CHECKING` for the `Model` type.
 
-The C extension (`_alea`) is imported at the top of `model.py` with a try/except. If unavailable, `_csg` is `None` and any geometry operation raises `RuntimeError`.
+The C extension (`_alea`) is imported with a try/except in modules that need it. If unavailable, `_alea` is `None` and C-backed operations raise `RuntimeError`.
 
 ## Build System
 
 The package uses a custom `setup.py` that:
 
-1. Compiles `libalea` via `make lib` in the `csrc/libalea/` submodule
-2. Builds the CPython extension (`_alea`) linking against the static library
+1. Compiles `libalea` via `make full` in the `csrc/libalea/` submodule
+2. Builds the CPython extension (`_alea`) linking against `bin/libalea_full.a`
 3. Installs the extension alongside the Python package
 
 ```bash
@@ -283,7 +271,7 @@ python3 setup.py build_ext --inplace   # Development build
 pip install -e .                        # Editable install
 ```
 
-The C binding (`_binding/aleathor_binding.c`) is a single file that wraps every public `libalea` function. It uses the Python C API directly (no CFFI, no ctypes, no Cython).
+The C binding uses the Python C API directly (no CFFI, no ctypes, no Cython). `aleathor_binding.c` is the extension entry point and includes feature-focused binding files such as `_bind_core.c`, `_bind_io.c`, `_bind_raycast.c`, `_bind_slice.c`, `_bind_mesh.c`, and `_bind_void.c`.
 
 The binding includes headers for all library modules:
 - `alea.h` — core system, cells, surfaces, CSG operations, simplification

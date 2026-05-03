@@ -166,7 +166,7 @@ class Cell:
     def depth(self) -> int:
         """Hierarchy depth (0 = root universe).
 
-        Set by cells_at() for hierarchical queries. For cells obtained
+        Set by cell_path_at() for hierarchical queries. For cells obtained
         via iteration or get_cell(), this is always 0.
         """
         return self._depth

@@ -135,16 +135,14 @@ def _populate_regions(model: Model, sys) -> None:
         model._regions[cell_id] = _ImportedRegion(sys, cell_info['root_node'])
 
 
-def write_mcnp(model: Model, filename: Union[str, Path],
-               deduplicate: bool = True) -> None:
+def write_mcnp(model: Model, filename: Union[str, Path]) -> None:
     """Write model to MCNP format.
 
     Args:
         model: Model to export.
         filename: Output file path.
-        deduplicate: Deduplicate surfaces.
     """
-    model.export_mcnp(filename, deduplicate=deduplicate)
+    model.export_mcnp(filename)
 
 
 def write_openmc(model: Model, filename: Union[str, Path]) -> None:

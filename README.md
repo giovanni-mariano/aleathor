@@ -6,7 +6,7 @@
 
 A Python library for debugging and analyzing large Constructive Solid Geometry (CSG) models used in neutron and gamma transport simulations.
 
-While other excellent packages exist for constructing CSG geometries programmatically, aleathor focuses on **debugging, visualization, and analysis** of existing models. It can read MCNP and OpenMC geometry files, perform fast ray tracing to identify geometry errors, and generate plots of arbitrary cross-sections.
+While other excellent packages exist for constructing CSG geometries programmatically, aleathor focuses on **debugging, visualization, and analysis** of existing models. It can read MCNP and OpenMC geometry files, perform ray tracing, query points and nested universes, and generate cross-section plots.
 
 
 **The package is still under development.**
@@ -15,18 +15,25 @@ While other excellent packages exist for constructing CSG geometries programmati
 
 This package was developed with support of AI tools.
 
-## Key Features (under development)
+## Current Status
+
+aleathor is in alpha. The codebase supports MCNP/OpenMC loading, point queries, ray tracing, slice plotting, mesh sampling/export, and MCNP/OpenMC/Serpent export, but conversion paths and large production workflows still need broader validation.
+
+For the website version of this overview, see the [Current Status](docs/STATUS.md) page.
+
+## Key Features
 
 ### Geometry Import
 
 - **MCNP Input Files**: Read complex MCNP geometry definitions including cells, surfaces, universes, and transforms
-- **OpenMC Models**: Import OpenMC XML geometry files (planned)
+- **OpenMC Models**: Import OpenMC XML geometry files (alpha)
 - **Automatic Surface Expansion**: Macrobodies are expanded to their constituent surfaces
 
 ### Geometry Debugging
 
 - **Point Queries**: Instantly find which cell contains any point in the geometry
-- **Ray Tracing**: Trace rays through the model to identify lost particles, overlaps, and undefined regions
+- **Hierarchy Queries**: Inspect nested universe/FILL paths with `cell_path_at`
+- **Ray Tracing**: Trace rays through the model to inspect cell/material transitions and identify void or undefined regions
 - **Path Length Calculations**: Compute material-specific path lengths for shielding analysis
 - **Cell Filtering**: Query cells by material, universe, fill, or custom predicates
 
@@ -53,7 +60,7 @@ This package was developed with support of AI tools.
 ### Performance
 
 - **C Backend**: Core geometry operations implemented in C for speed
-- **Large Model Support**: Designed for models with 10,000+ cells (tokamak-scale)
+- **Large Model Support**: Query acceleration for large, nested models
 - **Efficient Queries**: Optimized data structures for fast point-in-cell lookups
 
 
@@ -207,7 +214,7 @@ aleathor was specifically designed for debugging Tokamak-scale fusion reactor mo
 
 ### Model Conversion
 
-- From MCNP to OpenMC and vice-versa 
+- Export to MCNP, OpenMC XML, and Serpent. Conversion paths are alpha and should be validated before production use.
 
 
 ## Documentation

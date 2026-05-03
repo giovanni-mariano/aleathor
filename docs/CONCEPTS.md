@@ -117,7 +117,7 @@ Every cell has:
 - **Cell ID**: the MCNP cell number (unique identifier, positive integer)
 - **Region**: a `Region` defining the shape
 - **Material**: material number (0 for void)
-- **Density**: material density (negative = g/cm^3, positive = atoms/barn-cm)
+- **Density**: positive magnitude on the Python side; `density_unit` controls whether it is exported as MCNP mass density (`"g/cm3"`, negative syntax) or atom density (`"atoms/b-cm"`, positive syntax)
 - **Universe**: which universe the cell belongs to (default 0)
 - **Fill**: optionally, a universe to fill this cell with
 - **Importance**: particle importance for transport (default 1.0)
@@ -131,21 +131,20 @@ sphere = ath.Sphere(0, 0, 0, radius=5.0)
 cell = model.add_cell(
     region=-sphere,
     material=1,
-    density=-10.5,
+    density=10.5,
     name="fuel"
 )
 ```
 
-### _CellData vs Cell
+### Cell Views
 
-aleathor has two cell representations:
+`Cell` is the public API type for inspecting and mutating cells:
 
 | Type | Purpose | Source |
 |------|---------|--------|
-| `_CellData` | Internal dataclass holding Python Region objects | `model.add_cell()` (internal) |
-| `Cell` | Mutable view backed by the C system | `model.get_cell()`, `model.cell_at()`, iteration |
+| `Cell` | Mutable view backed by the C system | `model.add_cell()`, `model.get_cell()`, `model.cell_at()`, iteration |
 
-When you **build** geometry in Python, cells are stored as `_CellData` dataclass instances in `model._cells`. When you **query** geometry, the C system returns `Cell` objects.
+When you **build** geometry in Python, cells are pushed to the C backend immediately and Python keeps metadata such as names, regions, and importances in side dictionaries. When you **query** geometry, the C system returns cell indices that are wrapped as `Cell` objects.
 
 `Cell` is the public API type. It provides access to all cell properties, with mutation support for key fields:
 
@@ -171,7 +170,7 @@ cell.density = 5.0
 model.update_cell(10, material=2, density=5.0)  # Also works
 ```
 
-Mutations mark the model dirty so the C system is rebuilt on the next query.
+Cell property setters update the C backend directly. Python-side metadata such as `name` and `importance` is stored on the `Model`.
 
 ## Universes
 
@@ -193,8 +192,8 @@ This is recursive. aleathor handles arbitrary nesting depth.
 
 ```python
 # Define pin geometry in universe 1
-model.add_cell(-fuel_surf, material=1, density=-10.0, universe=1)
-model.add_cell(-clad_surf & +fuel_surf, material=2, density=-6.5, universe=1)
+model.add_cell(-fuel_surf, material=1, density=10.0, universe=1)
+model.add_cell(-clad_surf & +fuel_surf, material=2, density=6.5, universe=1)
 
 # Container in universe 0, filled with universe 1
 model.add_cell(-box, fill=1)
@@ -245,7 +244,7 @@ A material is a composition of nuclides or elements. aleathor stores:
 Materials are preserved through loading and export. aleathor doesn't do physics with materials — it carries them along so queries return the correct material number and exports produce valid input files.
 
 ```python
-model.add_material(1, name="UO2", density=-10.5)
+model.add_material(1, name="UO2", density=10.5)
 model.add_material(2, name="Steel")
 
 # Create a mixture
@@ -254,27 +253,27 @@ mix_id = model.create_mixture([1, 2], [0.7, 0.3], name="fuel-steel-mix")
 
 ## Model Lifecycle
 
-The `Model` class manages a dual representation:
+The `Model` class manages C-backed geometry plus Python-side metadata:
 
-1. **Python objects**: `Cell` dataclass instances in `model._cells`, `Surface` objects in `model._surfaces`
-2. **C system**: the compiled geometry in `model._sys`, used for all queries
+1. **C system**: the compiled geometry in `model._sys`, used for all queries
+2. **Python metadata**: names, importances, Python-created surfaces, and inspectable region wrappers
 
-### The dirty flag
+### Query preparation
 
-When you modify cells (add, remove, update), the Python objects are changed immediately but the C system becomes **stale**. The `_dirty` flag tracks this:
+When you query the geometry, aleathor prepares the needed acceleration structures automatically:
 
 ```python
-model.add_cell(...)      # Sets _dirty = True
-model.cell_at(0, 0, 0)  # Triggers _rebuild_if_needed() — rebuilds C system
+model.add_cell(...)      # Pushes the cell to the C backend
+model.cell_at(0, 0, 0)  # Ensures query caches are ready, then queries C
 ```
 
-The rebuild is automatic and transparent. You never need to call it manually.
+The query acceleration caches are built automatically and transparently. You never need to call a preparation method before querying.
 
 ### Loaded models
 
-When you load a model from an MCNP file, the C system is populated directly by the parser. Cells use `_ImportedRegion` objects instead of Python `Region` trees — these are lightweight wrappers that reference the C system's CSG nodes. The Python `_cells` dict is empty for loaded models.
+When you load a model from an MCNP file, the C system is populated directly by the parser. Cells use `_ImportedRegion` objects instead of Python-created `Region` trees — these are lightweight wrappers that reference the C system's CSG nodes and can reconstruct a Python region tree lazily for inspection.
 
-This means loaded models are efficient: they don't duplicate the geometry in Python objects.
+This means loaded models are efficient: they do not eagerly duplicate the geometry in Python objects.
 
 ## Macrobodies
 

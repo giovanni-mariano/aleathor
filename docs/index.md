@@ -12,6 +12,7 @@ It focuses on inspecting existing MCNP and OpenMC-style geometry models, finding
 
 ## Start Here
 
+- [Current Status](STATUS.md): what is available now and what is still experimental.
 - [Tutorial](TUTORIAL.md): load a model, query geometry, plot slices, and export results.
 - [Concepts](CONCEPTS.md): learn the geometry concepts used by aleathor.
 - [API Reference](API.md): find public classes, functions, and methods grouped by task.
