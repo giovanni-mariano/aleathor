@@ -226,8 +226,8 @@ https://giovanni-mariano.github.io/aleathor/
 | Document | Audience | Purpose |
 |----------|----------|---------|
 | [Tutorial](docs/TUTORIAL.md) | New users | Walk-through from loading a model to exporting results |
-| [Concepts](docs/CONCEPTS.md) | All users | Surfaces, sense, regions, cells, universes, and other domain concepts |
-| [Architecture](docs/ARCHITECTURE.md) | Contributors | Internal data model, dual representation, and design decisions |
+| [Concepts](docs/CONCEPTS.md) | All users | User-facing geometry and API mental model |
+| [Architecture](docs/ARCHITECTURE.md) | Contributors | Contributor-facing internals and C/Python design |
 | [API Reference](docs/API.md) | All users | Every public class and function, grouped by task |
 
 Start with the **Tutorial** if you're new. Refer to **Concepts** when something doesn't behave as you expect. The **API Reference** is for when you know what you want but forgot the method name.

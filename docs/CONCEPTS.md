@@ -122,7 +122,7 @@ Every cell has:
 - **Fill**: optionally, a universe to fill this cell with
 - **Importance**: particle importance for transport (default 1.0)
 
-A cell either has a material or a fill, never both. A cell with a fill is a "container" — it defines a region of space and says "look in universe N to find what's actually here."
+A cell can have a material, a fill, or neither. In normal transport-style models, a filled cell is usually a container: it defines a region of space and says "look in universe N to find what's actually here." For clarity, avoid assigning both a material and a fill unless you are deliberately modeling an imported format that uses that combination.
 
 ```python
 model = ath.Model()
@@ -222,15 +222,16 @@ for cell in model.cells:
 
 When aleathor evaluates a point inside a lattice cell, it determines which lattice element the point falls in (based on pitch and lower-left corner), looks up the universe for that element in the fill array, and searches for the point among that universe's cells.
 
-### set_fill
+### Fill Mutation
 
 You can change a cell's fill after creation:
 
 ```python
-model.set_fill(cell_id=10, fill_universe=5, transform=0)
+cell = model[10]
+cell.fill = 5
 ```
 
-This operates on the C system directly and takes effect immediately (no rebuild needed).
+This operates on the C system directly and takes effect immediately. `model.set_fill(cell_id=10, fill_universe=5, transform=0)` is also available when you need the explicit transform argument.
 
 ## Materials
 
@@ -238,10 +239,10 @@ A material is a composition of nuclides or elements. aleathor stores:
 
 - **Material ID**: the MCNP material number
 - **Name**: optional human-readable name
-- **Density**: stored on the cell, not the material
-- **Composition**: optional nuclide fractions
+- **Density**: an optional standard material density; cell density is still stored on each cell
+- **Composition**: optional nuclide and element fractions
 
-Materials are preserved through loading and export. aleathor doesn't do physics with materials — it carries them along so queries return the correct material number and exports produce valid input files.
+Materials are preserved through loading and export. aleathor does limited material bookkeeping for composition and export; geometry queries return material IDs but do not perform transport physics.
 
 ```python
 model.add_material(1, name="UO2", density=10.5)
@@ -325,13 +326,13 @@ model.config = {         # Update specific keys
 }
 ```
 
-Key configuration fields:
+Common configuration fields:
 
 | Key | Default | Meaning |
 |-----|---------|---------|
-| `abs_tol` | 1e-6 | Absolute tolerance for surface matching |
-| `rel_tol` | 1e-9 | Relative tolerance |
-| `log_level` | 0 | 0=none, 1=error, 2=warn, 3=info, 4=debug, 5=trace |
+| `abs_tol` | implementation default | Absolute tolerance for geometric comparisons |
+| `rel_tol` | implementation default | Relative tolerance |
+| `log_level` | implementation default | 0=none, 1=error, 2=warn, 3=info, 4=debug, 5=trace |
 | `dedup` | true | Enable surface deduplication |
 | `export_materials` | true | Include material cards in export |
 
