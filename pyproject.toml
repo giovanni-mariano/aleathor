@@ -1,6 +1,6 @@
 [project]
 name = "aleathor"
-version = "0.1.0"
+version = "0.1.0a2"
 description = "Constructive Solid Geometry library for nuclear simulations with MCNP export"
 readme = "README.md"
 license = "MPL-2.0"
