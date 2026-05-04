@@ -714,11 +714,11 @@ class VoidResult:
     covering empty space in the geometry.
 
     Supports iteration over boxes, merging, and conversion to CSG nodes.
-    Commit generated voids through ``Model.add_voids(voids)`` so model
-    mutations stay explicit on the model API.
+    Commit generated voids through ``model.void.add(voids)`` so model
+    mutations stay explicit on the void API.
 
     Example:
-        voids = model.generate_void(bounds=(-10, 10, -10, 10, -10, 10))
+        voids = model.void.generate(bounds=(-10, 10, -10, 10, -10, 10))
         print(f"Found {len(voids)} void boxes")
 
         for box in voids:

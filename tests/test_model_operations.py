@@ -119,16 +119,37 @@ class TestObjectRepr:
 class TestSpatialIndexing:
     """Tests for spatial indexing methods."""
 
+    def test_advanced_methods_are_namespaced(self):
+        """Advanced APIs should not live directly on Model."""
+        from aleathor import Model
+
+        for name in (
+            "build_spatial_index",
+            "spatial_index_instance_count",
+            "sample_mesh",
+            "export_mesh",
+            "find_overlaps",
+            "generate_void",
+            "add_voids",
+            "add_graveyard",
+            "simplify",
+            "flatten_universe",
+            "set_fill",
+            "config",
+            "set_verbose",
+        ):
+            assert not hasattr(Model, name)
+
     def test_build_spatial_index_returns_self(self, simple_model):
         """build_spatial_index should return self for chaining."""
-        result = simple_model.build_spatial_index()
+        result = simple_model.backend.build_spatial_index()
 
         assert result is simple_model
 
     def test_spatial_index_instance_count(self, simple_model):
         """Should have positive instance count after building index."""
-        simple_model.build_spatial_index()
-        count = simple_model.spatial_index_instance_count
+        simple_model.backend.build_spatial_index()
+        count = simple_model.backend.spatial_index_instance_count
 
         assert isinstance(count, int)
         assert count >= 0
@@ -136,7 +157,7 @@ class TestSpatialIndexing:
     def test_spatial_index_without_build(self, simple_model):
         """Should return 0 if index not built."""
         # Fresh model, no index built
-        count = simple_model.spatial_index_instance_count
+        count = simple_model.backend.spatial_index_instance_count
 
         assert count == 0
 
@@ -169,7 +190,7 @@ class TestFlattenUniverse:
     def test_flatten_universe_no_error(self, simple_model):
         """flatten_universe should not raise for valid universe."""
         # Should not raise
-        simple_model.flatten_universe(0)
+        simple_model.repair.flatten_universe(0)
 
 
 class TestVoidGenerationApi:
@@ -184,7 +205,7 @@ class TestVoidGenerationApi:
         model.add_cell(region=-sphere, material=1, density=1.0)
 
         before = len(model.cells)
-        voids = model.generate_void(
+        voids = model.void.generate(
             bounds=(-2, 2, -2, 2, -2, 2),
             max_depth=2,
             min_size=0.5,
@@ -194,7 +215,7 @@ class TestVoidGenerationApi:
         assert not hasattr(voids, "add_cells")
         assert not hasattr(voids, "add_graveyard")
 
-        added = model.add_voids(voids)
+        added = model.void.add(voids)
         assert added > 0
         assert len(model.cells) == before + added
 
@@ -207,7 +228,7 @@ class TestVoidGenerationApi:
         bounds = ath.Sphere(0, 0, 0, radius=3.0)
         model.add_cell(region=-sphere, material=1, density=1.0)
 
-        voids = model.generate_void(
+        voids = model.void.generate(
             region=-bounds,
             max_depth=2,
             min_size=0.5,
@@ -215,7 +236,7 @@ class TestVoidGenerationApi:
         assert len(voids) > 0
 
         voids.merge()
-        added = model.add_voids(voids)
+        added = model.void.add(voids)
         assert added > 0
 
     def test_generate_void_rejects_bounds_and_region_together(self):
@@ -227,7 +248,7 @@ class TestVoidGenerationApi:
         model.add_cell(region=-sphere, material=1, density=1.0)
 
         with pytest.raises(ValueError, match="mutually exclusive"):
-            model.generate_void(
+            model.void.generate(
                 bounds=(-2, 2, -2, 2, -2, 2),
                 region=-ath.Sphere(0, 0, 0, radius=3.0),
             )
@@ -272,11 +293,9 @@ class TestCellMutation:
             simple_model.cells.by_fill(0)
         with pytest.raises(ValueError):
             simple_model.get_cells_filling_universe(0)
-        with pytest.raises(ValueError):
-            simple_model.set_fill(1, 0)
 
-        simple_model.set_fill(1, 5)
-        simple_model.set_fill(1, None)
+        cell.fill = 5
+        cell.fill = None
         assert cell.fill is None
 
     def test_set_material(self, simple_model):
@@ -366,14 +385,14 @@ class TestCellMutation:
         cell = model[1]
         assert cell.fill == 5
 
-    def test_set_fill_syncs_python_cell(self, simple_model):
-        """Model.set_fill() should sync the Python Cell."""
-        simple_model.set_fill(1, 8)
+    def test_cell_fill_syncs_python_cell(self, simple_model):
+        """Cell.fill should sync through the C backend."""
+        cell = simple_model[1]
+        cell.fill = 8
 
         simple_model.update_cell(2, material=99)
 
-        cell = simple_model[1]
-        assert cell.fill == 8
+        assert simple_model[1].fill == 8
 
     def test_mutation_updates_c(self, simple_model):
         """Setting material should update C backend directly."""

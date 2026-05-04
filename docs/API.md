@@ -77,8 +77,8 @@ model.cells         # CellCollection: all cells, with filtering support
 model.surfaces      # Dict[int, Surface]: all surfaces by ID
 model.materials     # List[Material]: all materials
 model.universes     # List[Universe]: all universes
-model.config        # Dict[str, Any]: system configuration (getter/setter)
-model.spatial_index_instance_count  # int: cell instances in spatial index
+model.backend.config        # Dict[str, Any]: system configuration (getter/setter)
+model.backend.spatial_index_instance_count  # int: cell instances in spatial index
 ```
 
 ---
@@ -221,10 +221,10 @@ model.contains_point(x: float, y: float, z: float) -> bool
 
 Check if point is inside any cell (not void).
 
-### model.find_overlaps
+### model.analysis.find_overlaps
 
 ```python
-model.find_overlaps(max_pairs: int = 100) -> List[Tuple[Cell, Cell]]
+model.analysis.find_overlaps(max_pairs: int = 100) -> List[Tuple[Cell, Cell]]
 ```
 
 Find overlapping cell pairs by statistical sampling.
@@ -545,12 +545,12 @@ ath.write_serpent(model, filename) -> None
 
 ---
 
-## Mesh Export
+## Mesh API
 
-### model.export_mesh
+### model.mesh.export
 
 ```python
-model.export_mesh(
+model.mesh.export(
     filename: str,
     nx: int = 10, ny: int = 10, nz: int = 10,
     bounds: Tuple[float, ...] = None,   # (xmin, xmax, ymin, ymax, zmin, zmax), None = auto
@@ -566,10 +566,10 @@ Supported formats:
 - `"gmsh"`: Gmsh `.msh` v2.2 ASCII — can be opened in Gmsh for visualization
 - `"vtk"`: VTK legacy `.vtk` ASCII — can be opened in ParaView
 
-### model.sample_mesh
+### model.mesh.sample
 
 ```python
-model.sample_mesh(
+model.mesh.sample(
     nx: int = 10, ny: int = 10, nz: int = 10,
     bounds: Tuple[float, ...] = None,
     void_material_id: int = 0,
@@ -595,8 +595,8 @@ Sample the geometry on a structured mesh without writing to file. Returns a dict
 ### Renumbering
 
 ```python
-model.renumber_cells(start_id: int = 1) -> int
-model.renumber_surfaces(start_id: int = 1) -> int
+model.ids.renumber_cells(start_id: int = 1) -> int
+model.ids.renumber_surfaces(start_id: int = 1) -> int
 ```
 
 Reassign IDs starting from `start_id`, preserving order. Returns the count.
@@ -604,9 +604,9 @@ Reassign IDs starting from `start_id`, preserving order. Returns the count.
 ### Offsetting
 
 ```python
-model.offset_cell_ids(offset: int) -> None
-model.offset_surface_ids(offset: int) -> None
-model.offset_material_ids(offset: int) -> None
+model.ids.offset_cells(offset: int) -> None
+model.ids.offset_surfaces(offset: int) -> None
+model.ids.offset_materials(offset: int) -> None
 ```
 
 Add a fixed offset to all IDs. Useful when merging models.
@@ -614,13 +614,13 @@ Add a fixed offset to all IDs. Useful when merging models.
 ### Splitting and expanding
 
 ```python
-model.split_union_cells() -> int
+model.repair.split_union_cells() -> int
 ```
 
 Split cells with top-level unions into multiple simpler cells. Returns number of new cells created.
 
 ```python
-model.expand_macrobodies() -> int
+model.repair.expand_macrobodies() -> int
 ```
 
 Expand all macrobodies to primitive surfaces. Returns number expanded.
@@ -628,49 +628,52 @@ Expand all macrobodies to primitive surfaces. Returns number expanded.
 ### Bounding boxes
 
 ```python
-model.tighten_bboxes(tolerance: float = 1.0) -> int
+model.repair.tighten_bboxes(tolerance: float = 1.0) -> int
 ```
 
 Tighten all cell bounding boxes via interval arithmetic. Returns number tightened.
 
 ```python
-model.tighten_cell_bbox(cell_id: int, tolerance: float = 1.0)
+model.repair.tighten_cell_bbox(cell_id: int, tolerance: float = 1.0)
     -> Tuple[float, float, float, float, float, float]
 ```
 
 Tighten a single cell's bounding box. Returns `(xmin, xmax, ymin, ymax, zmin, zmax)`. Raises `KeyError` if cell not found.
 
 ```python
-model.tighten_bbox_numerical(cell_id: int) -> None
+model.repair.tighten_bbox_numerical(cell_id: int) -> None
 ```
 
 Tighten a cell's bounding box using numerical sampling. This is a fallback for cells where interval arithmetic gives loose bounds (e.g., cells with complex boolean expressions). Raises `KeyError` if cell not found, `RuntimeError` on failure.
 
 ### Fill mutation
 
-```python
-model.set_fill(cell_id: int, fill_universe: int, transform: int = 0) -> None
-```
+Use the cell view API for fills:
 
-Set the fill universe for a cell. Operates on the C system directly. Raises `KeyError` if cell not found.
+```python
+cell = model.cells[10]
+cell.fill = 5
+cell.fill = None
+cell.fill_with(universe, transform=3)
+```
 
 ---
 
 ## Volume Estimation
 
-### model.compute_bounding_sphere
+### model.analysis.bounding_sphere
 
 ```python
-model.compute_bounding_sphere(tolerance: float = 1.0)
+model.analysis.bounding_sphere(tolerance: float = 1.0)
     -> Tuple[float, float, float, float]
 ```
 
 Compute a tight bounding sphere. Returns `(cx, cy, cz, radius)`.
 
-### model.estimate_cell_volumes
+### model.analysis.estimate_cell_volumes
 
 ```python
-model.estimate_cell_volumes(
+model.analysis.estimate_cell_volumes(
     n_rays: int = 100000,
     center: Tuple[float, float, float] = None,  # Auto-computed if None
     radius: float = None,                         # Auto-computed if None
@@ -681,30 +684,30 @@ Estimate cell volumes using random ray tracing (Cauchy-Crofton method). Returns 
 
 If `center` or `radius` are not given, a bounding sphere is computed automatically.
 
-### model.estimate_instance_volumes
+### model.analysis.estimate_instance_volumes
 
 ```python
-model.estimate_instance_volumes(n_rays: int = 100000) -> dict
+model.analysis.estimate_instance_volumes(n_rays: int = 100000) -> dict
 ```
 
 Estimate volumes per cell instance (spatial-index aware). Query acceleration is prepared automatically if needed.
 
-### model.remove_cells_by_volume
+### model.analysis.remove_cells_by_volume
 
 ```python
-model.remove_cells_by_volume(volumes: list, threshold: float) -> int
+model.analysis.remove_cells_by_volume(volumes: list, threshold: float) -> int
 ```
 
-Remove cells whose estimated volume is below threshold. Returns number removed.
+Compute a tight bounding sphere for the model.
 
 ---
 
 ## Void Generation
 
-### model.generate_void
+### model.void.generate
 
 ```python
-model.generate_void(
+model.void.generate(
     bounds: Tuple[float, float, float, float, float, float] = None,
     max_depth: int = 8,
     min_size: float = 0.1,
@@ -734,8 +737,8 @@ Use `bounds` for an axis-aligned bbox. Use `region` to supply an existing finite
 Commit generated voids through the model:
 
 ```python
-added = model.add_voids(voids)
-model.add_graveyard(voids)
+added = model.void.add(voids)
+model.void.add_graveyard(voids)
 ```
 
 ---
@@ -744,26 +747,26 @@ model.add_graveyard(voids)
 
 Query methods (`cell_at`, `trace`, `slice.grid`, `get_cells_in_bbox`, `estimate_*`, `plot`) build their acceleration caches lazily on first use. There is no public preparation entry point — you do not need to call anything before issuing queries.
 
-### model.build_spatial_index
+### model.backend.build_spatial_index
 
 ```python
-model.build_spatial_index() -> Model
+model.backend.build_spatial_index() -> Model
 ```
 
 Build only the spatial index over cell instances. Returns `self` for chaining. Rarely needed in user code; query methods handle this automatically.
 
-### model.flatten_universe
+### model.repair.flatten_universe
 
 ```python
-model.flatten_universe(universe_id: int) -> None
+model.repair.flatten_universe(universe_id: int) -> None
 ```
 
 Expand all fills in a universe. After flattening, all cells are in the specified universe with no fills.
 
-### model.simplify
+### model.repair.simplify
 
 ```python
-model.simplify() -> dict
+model.repair.simplify() -> dict
 ```
 
 Run full CSG simplification on all cells. Applies complement elimination, double-negation removal, idempotent/absorption reductions, subtree deduplication, and more. Returns a dict with statistics:
@@ -801,20 +804,20 @@ Check for common issues: undefined materials in cells, overlapping cells, intern
 
 ## Configuration
 
-### model.config
+### model.backend.config
 
 ```python
 # Read
-cfg = model.config    # Returns dict
+cfg = model.backend.config    # Returns dict
 
 # Write (only provided keys are changed)
-model.config = {'log_level': 3, 'abs_tol': 1e-8}
+model.backend.config = {'log_level': 3, 'abs_tol': 1e-8}
 ```
 
-### model.set_verbose
+### model.backend.set_verbose
 
 ```python
-model.set_verbose(enabled: bool) -> None
+model.backend.set_verbose(enabled: bool) -> None
 ```
 
 Enable/disable verbose output from the C library.

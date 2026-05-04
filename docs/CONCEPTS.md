@@ -231,7 +231,8 @@ cell = model[10]
 cell.fill = 5
 ```
 
-This operates on the C system directly and takes effect immediately. `model.set_fill(cell_id=10, fill_universe=5, transform=0)` is also available when you need the explicit transform argument.
+This operates on the C system directly and takes effect immediately. Use
+`cell.fill_with(universe, transform=...)` when a fill transform is needed.
 
 ## Materials
 
@@ -294,7 +295,7 @@ Macrobodies are composite surfaces that MCNP defines as single surface cards but
 You can expand macrobodies to their primitive surfaces:
 
 ```python
-n = model.expand_macrobodies()
+n = model.repair.expand_macrobodies()
 print(f"Expanded {n} macrobodies")
 ```
 
@@ -319,8 +320,8 @@ s = ath.Sphere(0, 0, 0, radius=100.0, boundary='reflective')
 System behavior is controlled through the `config` property:
 
 ```python
-cfg = model.config       # Returns dict
-model.config = {         # Update specific keys
+cfg = model.backend.config       # Returns dict
+model.backend.config = {         # Update specific keys
     'abs_tol': 1e-8,
     'log_level': 3,
 }

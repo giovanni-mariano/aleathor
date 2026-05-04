@@ -283,7 +283,7 @@ The explicit methods `export_mcnp()`, `export_openmc()`, and `export_serpent()` 
 Overlap search is sampling-based:
 
 ```python
-for c1, c2 in model.find_overlaps():
+for c1, c2 in model.analysis.find_overlaps():
     print(f"Possible overlap: {c1.id}, {c2.id}")
 ```
 
@@ -306,7 +306,7 @@ errors = model.slice.check_overlaps(grid)
 Sample a structured mesh without writing a file:
 
 ```python
-mesh = model.sample_mesh(
+mesh = model.mesh.sample(
     nx=50,
     ny=50,
     nz=50,
@@ -320,7 +320,7 @@ cells = mesh["cell_ids"]
 Export to Gmsh or VTK:
 
 ```python
-model.export_mesh(
+model.mesh.export(
     "geometry.msh",
     nx=50,
     ny=50,
@@ -328,7 +328,7 @@ model.export_mesh(
     bounds=(-10, 10, -10, 10, -10, 10),
 )
 
-model.export_mesh(
+model.mesh.export(
     "geometry.vtk",
     nx=50,
     ny=50,
@@ -343,9 +343,9 @@ model.export_mesh(
 These are useful once you are working on larger or imported models:
 
 ```python
-stats = model.simplify()
-model.expand_macrobodies()
-model.tighten_bboxes(tolerance=1.0)
+stats = model.repair.simplify()
+model.repair.expand_macrobodies()
+model.repair.tighten_bboxes(tolerance=1.0)
 ```
 
 `simplify()` rewrites CSG trees; `expand_macrobodies()` turns MCNP macrobodies into primitive surfaces where supported; `tighten_bboxes()` improves cell bounding boxes used by spatial queries.

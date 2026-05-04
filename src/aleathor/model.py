@@ -381,6 +381,245 @@ class SliceApi:
         return check_grid_overlaps(self._model, grid_result, universe_depth)
 
 
+class MeshApi:
+    """Structured mesh operations for a model."""
+
+    def __init__(self, model: 'Model'):
+        self._model = model
+
+    def export(self, filename: Union[str, Path], nx: int = 10, ny: int = 10,
+               nz: int = 10,
+               bounds: Optional[Tuple[float, float, float, float, float, float]] = None,
+               format: str = "gmsh", void_material_id: int = 0,
+               auto_pad: float = 0.01) -> None:
+        """Export geometry as a structured mesh."""
+        model = self._model
+        model._ensure_sys()
+        kwargs = dict(filename=str(filename), nx=nx, ny=ny, nz=nz,
+                      format=format, void_material_id=void_material_id,
+                      auto_pad=auto_pad)
+        if bounds is not None:
+            kwargs.update(x_min=bounds[0], x_max=bounds[1],
+                          y_min=bounds[2], y_max=bounds[3],
+                          z_min=bounds[4], z_max=bounds[5])
+        model._sys.mesh_export(**kwargs)
+
+    def sample(self, nx: int = 10, ny: int = 10, nz: int = 10,
+               bounds: Optional[Tuple[float, float, float, float, float, float]] = None,
+               void_material_id: int = 0,
+               auto_pad: float = 0.01) -> Dict[str, Any]:
+        """Sample geometry on a structured mesh."""
+        model = self._model
+        model._ensure_sys()
+        kwargs = dict(nx=nx, ny=ny, nz=nz,
+                      void_material_id=void_material_id,
+                      auto_pad=auto_pad)
+        if bounds is not None:
+            kwargs.update(x_min=bounds[0], x_max=bounds[1],
+                          y_min=bounds[2], y_max=bounds[3],
+                          z_min=bounds[4], z_max=bounds[5])
+        return model._sys.mesh_sample(**kwargs)
+
+
+class IdApi:
+    """ID renumbering and offset operations for a model."""
+
+    def __init__(self, model: 'Model'):
+        self._model = model
+
+    def renumber_cells(self, start_id=1):
+        self._model._ensure_sys()
+        return self._model._sys.renumber_cells(start_id)
+
+    def renumber_surfaces(self, start_id=1):
+        self._model._ensure_sys()
+        return self._model._sys.renumber_surfaces(start_id)
+
+    def offset_cells(self, offset):
+        self._model._ensure_sys()
+        self._model._sys.offset_cell_ids(offset)
+
+    def offset_surfaces(self, offset):
+        self._model._ensure_sys()
+        self._model._sys.offset_surface_ids(offset)
+
+    def offset_materials(self, offset):
+        self._model._ensure_sys()
+        self._model._sys.offset_material_ids(offset)
+
+
+class RepairApi:
+    """Geometry cleanup and simplification operations for a model."""
+
+    def __init__(self, model: 'Model'):
+        self._model = model
+
+    def flatten_universe(self, universe_id: int) -> None:
+        self._model._ensure_sys()
+        self._model._sys.flatten_universe(universe_id)
+
+    def simplify(self) -> Dict[str, Any]:
+        self._model._ensure_sys()
+        return self._model._sys.flatten_all_cells()
+
+    def split_union_cells(self):
+        self._model._ensure_sys()
+        return self._model._sys.split_union_cells()
+
+    def expand_macrobodies(self):
+        self._model._ensure_sys()
+        return self._model._sys.expand_macrobodies()
+
+    def tighten_bboxes(self, tolerance=1.0):
+        self._model._ensure_sys()
+        return self._model._sys.tighten_all_bboxes(tolerance)
+
+    def tighten_cell_bbox(self, cell_id, tolerance=1.0):
+        self._model._ensure_sys()
+        idx = self._model._sys.cell_find(cell_id)
+        if idx is None:
+            raise KeyError(f"Cell {cell_id} not found")
+        return self._model._sys.tighten_cell_bbox(idx, tolerance)
+
+    def tighten_bbox_numerical(self, cell_id: int) -> None:
+        self._model._ensure_sys()
+        idx = self._model._sys.cell_find(cell_id)
+        if idx is None:
+            raise KeyError(f"Cell {cell_id} not found")
+        self._model._sys.tighten_cell_bbox_numerical(idx)
+
+
+class VoidApi:
+    """Void generation operations for a model."""
+
+    def __init__(self, model: 'Model'):
+        self._model = model
+
+    def generate(self,
+                 bounds: Optional[Tuple[float, float, float, float, float, float]] = None,
+                 max_depth: int = 8,
+                 min_size: float = 0.1,
+                 probes_per_axis: int = 3,
+                 region: Optional['Region'] = None) -> 'VoidResult':
+        """Find empty space in the geometry using octree decomposition."""
+        if _alea is None:
+            raise RuntimeError("C extension not available")
+        model = self._model
+        model._ensure_sys()
+
+        if bounds is not None and region is not None:
+            raise ValueError("bounds and region are mutually exclusive")
+
+        bounds_region = None
+        if region is not None:
+            from .geometry import Region
+            if not isinstance(region, Region):
+                raise TypeError("region must be a geometry Region")
+            bounds_region = region._to_csg(model)
+
+        c_result = _alea.generate_void(
+            model._sys,
+            bounds=bounds,
+            max_depth=max_depth,
+            min_size=min_size,
+            probes_per_axis=probes_per_axis,
+            bounds_region=bounds_region,
+        )
+        return VoidResult(model, c_result)
+
+    def add(self, voids: 'VoidResult') -> int:
+        """Commit generated void regions as material-0 cells."""
+        model = self._model
+        model._ensure_sys()
+        if not isinstance(voids, VoidResult):
+            raise TypeError("add() expects a VoidResult")
+        if voids._model is not model:
+            raise ValueError("VoidResult belongs to a different Model")
+        return voids._c_result.add_cells()
+
+    def add_graveyard(self, voids: 'VoidResult') -> int:
+        """Add a graveyard cell enclosing generated void bounds."""
+        model = self._model
+        model._ensure_sys()
+        if not isinstance(voids, VoidResult):
+            raise TypeError("add_graveyard() expects a VoidResult")
+        if voids._model is not model:
+            raise ValueError("VoidResult belongs to a different Model")
+        return voids._c_result.add_graveyard()
+
+
+class AnalysisApi:
+    """Diagnostics and analysis operations for a model."""
+
+    def __init__(self, model: 'Model'):
+        self._model = model
+
+    def find_overlaps(self, max_pairs: int = 100) -> List[Tuple[Cell, Cell]]:
+        model = self._model
+        model._ensure_sys()
+        pairs = model._sys.find_overlaps(max_pairs)
+        return [(Cell(model, idx1), Cell(model, idx2)) for idx1, idx2 in pairs]
+
+    def bounding_sphere(self, tolerance=1.0):
+        self._model._ensure_sys()
+        return self._model._sys.compute_bounding_sphere(tolerance)
+
+    def estimate_cell_volumes(self, n_rays=100000, center=None, radius=None):
+        model = self._model
+        model._ensure_query_caches()
+        if center is None or radius is None:
+            cx, cy, cz, r = self.bounding_sphere()
+            if center is None:
+                center = (cx, cy, cz)
+            if radius is None:
+                radius = r
+        ox, oy, oz = center
+        return model._sys.estimate_cell_volumes(ox, oy, oz, radius, n_rays)
+
+    def estimate_instance_volumes(self, n_rays=100000):
+        self._model._ensure_query_caches()
+        return self._model._sys.estimate_instance_volumes(n_rays)
+
+    def remove_cells_by_volume(self, volumes, threshold):
+        self._model._ensure_sys()
+        return self._model._sys.remove_cells_by_volume(volumes, threshold)
+
+
+class BackendApi:
+    """Low-level backend controls for a model."""
+
+    def __init__(self, model: 'Model'):
+        self._model = model
+
+    @property
+    def config(self) -> Dict[str, Any]:
+        self._model._ensure_sys()
+        return self._model._sys.get_config()
+
+    @config.setter
+    def config(self, settings: Dict[str, Any]) -> None:
+        self._model._ensure_sys()
+        self._model._sys.set_config(settings)
+
+    def set_verbose(self, enabled: bool) -> None:
+        self._model._ensure_sys()
+        self._model._sys.set_verbose(enabled)
+
+    def build_spatial_index(self) -> 'Model':
+        self._model._ensure_sys()
+        self._model._sys.build_spatial_index()
+        return self._model
+
+    @property
+    def spatial_index_instance_count(self) -> int:
+        if self._model._sys is None:
+            return 0
+        try:
+            return self._model._sys.spatial_index_instance_count
+        except AttributeError:
+            return 0
+
+
 @dataclass
 class Universe:
     """Universe definition.
@@ -864,6 +1103,36 @@ class Model:
         """Slice operations."""
         return SliceApi(self)
 
+    @property
+    def mesh(self) -> MeshApi:
+        """Structured mesh operations."""
+        return MeshApi(self)
+
+    @property
+    def ids(self) -> IdApi:
+        """ID renumbering and offset operations."""
+        return IdApi(self)
+
+    @property
+    def repair(self) -> RepairApi:
+        """Geometry cleanup and simplification operations."""
+        return RepairApi(self)
+
+    @property
+    def void(self) -> VoidApi:
+        """Void generation operations."""
+        return VoidApi(self)
+
+    @property
+    def analysis(self) -> AnalysisApi:
+        """Diagnostics and analysis operations."""
+        return AnalysisApi(self)
+
+    @property
+    def backend(self) -> BackendApi:
+        """Low-level backend controls."""
+        return BackendApi(self)
+
     # =========================================================================
     # Material Management
     # =========================================================================
@@ -1031,19 +1300,6 @@ class Model:
         """Check if point is inside any cell (not void)."""
         return self.cell_at(x, y, z) is not None
 
-    def find_overlaps(self, max_pairs: int = 100) -> List[Tuple[Cell, Cell]]:
-        """Find overlapping cell pairs.
-
-        Returns:
-            List of (Cell, Cell) tuples for overlapping cells.
-        """
-        self._ensure_sys()
-        pairs = self._sys.find_overlaps(max_pairs)
-        result = []
-        for idx1, idx2 in pairs:
-            result.append((Cell(self, idx1), Cell(self, idx2)))
-        return result
-
     # =========================================================================
     # Export
     # =========================================================================
@@ -1107,63 +1363,6 @@ class Model:
     # Mesh Export
     # =========================================================================
 
-    def export_mesh(self, filename: Union[str, Path], nx: int = 10, ny: int = 10,
-                    nz: int = 10, bounds: Optional[Tuple[float, float, float, float, float, float]] = None,
-                    format: str = "gmsh", void_material_id: int = 0,
-                    auto_pad: float = 0.01) -> None:
-        """Export geometry as structured mesh (Gmsh or VTK).
-
-        Args:
-            filename: Output file path (.msh for Gmsh, .vtk for VTK)
-            nx, ny, nz: Number of elements per axis
-            bounds: (x_min, x_max, y_min, y_max, z_min, z_max) or None for auto
-            format: 'gmsh' or 'vtk'
-            void_material_id: Material ID for void regions (default 0)
-            auto_pad: Fractional padding for auto-bounds (default 0.01)
-
-        Example:
-            model.export_mesh("output.msh", nx=50, ny=50, nz=50)
-        """
-        self._ensure_sys()
-        kwargs = dict(filename=str(filename), nx=nx, ny=ny, nz=nz,
-                      format=format, void_material_id=void_material_id,
-                      auto_pad=auto_pad)
-        if bounds is not None:
-            kwargs.update(x_min=bounds[0], x_max=bounds[1],
-                          y_min=bounds[2], y_max=bounds[3],
-                          z_min=bounds[4], z_max=bounds[5])
-        self._sys.mesh_export(**kwargs)
-
-    def sample_mesh(self, nx: int = 10, ny: int = 10, nz: int = 10,
-                    bounds: Optional[Tuple[float, float, float, float, float, float]] = None,
-                    void_material_id: int = 0,
-                    auto_pad: float = 0.01) -> Dict[str, Any]:
-        """Sample geometry on a structured mesh.
-
-        Args:
-            nx, ny, nz: Number of elements per axis
-            bounds: (x_min, x_max, y_min, y_max, z_min, z_max) or None for auto
-            void_material_id: Material ID for void regions (default 0)
-            auto_pad: Fractional padding for auto-bounds (default 0.01)
-
-        Returns:
-            Dict with 'material_ids', 'cell_ids' (flat lists, Z-major order),
-            'x_nodes', 'y_nodes', 'z_nodes' (node positions), 'nx', 'ny', 'nz'.
-
-        Example:
-            result = model.sample_mesh(nx=50, ny=50, nz=50)
-            materials = result['material_ids']
-        """
-        self._ensure_sys()
-        kwargs = dict(nx=nx, ny=ny, nz=nz,
-                      void_material_id=void_material_id,
-                      auto_pad=auto_pad)
-        if bounds is not None:
-            kwargs.update(x_min=bounds[0], x_max=bounds[1],
-                          y_min=bounds[2], y_max=bounds[3],
-                          z_min=bounds[4], z_max=bounds[5])
-        return self._sys.mesh_sample(**kwargs)
-
     # =========================================================================
     # Validation
     # =========================================================================
@@ -1185,7 +1384,7 @@ class Model:
                     issues.append(f"Cell {info['cell_id']} uses undefined material {mat_id}")
 
         # Check for overlaps
-        overlaps = self.find_overlaps()
+        overlaps = self.analysis.find_overlaps()
         for c1, c2 in overlaps:
             issues.append(f"Cells {c1.id} and {c2.id} overlap")
 
@@ -1200,11 +1399,6 @@ class Model:
     # =========================================================================
     # Utilities
     # =========================================================================
-
-    def set_verbose(self, enabled: bool) -> None:
-        """Enable/disable verbose output."""
-        self._ensure_sys()
-        self._sys.set_verbose(enabled)
 
     def print_summary(self) -> None:
         """Print model summary."""
@@ -1221,67 +1415,6 @@ class Model:
         n_cells = self._sys.cell_count if self._sys else 0
         n_surfaces = self._sys.surface_count if self._sys else len(self._surfaces)
         return f"Model(title='{self.title}', cells={n_cells}, surfaces={n_surfaces})"
-
-    # =========================================================================
-    # Spatial Indexing
-    # =========================================================================
-
-    def build_spatial_index(self) -> 'Model':
-        """Build spatial index for fast queries.
-
-        Builds a BVH over all cell instances (flattened bboxes, not geometry).
-        This enables fast spatial queries and slice rendering without memory
-        explosion from flattening large models with many FILL references.
-
-        Call this once after loading a geometry with FILLs. The spatial index
-        is used automatically by slice rendering functions.
-
-        Returns:
-            self for chaining
-
-        Example:
-            model = ath.load("big_model.inp")
-            model.build_spatial_index()  # Fast slicing now works
-            model.plot(z=0, bounds=(-10, 10, -10, 10))
-        """
-        self._ensure_sys()
-        self._sys.build_spatial_index()
-        return self
-
-    @property
-    def spatial_index_instance_count(self) -> int:
-        """Number of cell instances in spatial index (for diagnostics)."""
-        if self._sys is None:
-            return 0
-        try:
-            return self._sys.spatial_index_instance_count
-        except AttributeError:
-            return 0
-
-    def flatten_universe(self, universe_id: int) -> None:
-        """Flatten a universe by expanding all FILLs.
-
-        Args:
-            universe_id: Universe ID to flatten
-        """
-        self._ensure_sys()
-        self._sys.flatten_universe(universe_id)
-
-    def simplify(self) -> Dict[str, Any]:
-        """Run full CSG simplification on all cells.
-
-        Applies complement elimination, double-negation removal,
-        idempotent/absorption reductions, subtree deduplication, and more.
-
-        Returns:
-            Dict with simplification statistics (nodes_before, nodes_after, etc.)
-
-        Example:
-            stats = model.simplify()
-            print(f"Reduced {stats['nodes_before']} -> {stats['nodes_after']} nodes")
-        """
-        self._ensure_sys()
-        return self._sys.flatten_all_cells()
 
     # =========================================================================
     # Cell Filtering (C-backed for performance)
@@ -1520,251 +1653,6 @@ class Model:
         """Plot geometry slice using grid-based rendering."""
         from .plotting import plot as _plot
         return _plot(self, z=z, y=y, x=x, **kwargs)
-
-    # =========================================================================
-    # Volume Estimation
-    # =========================================================================
-
-    def compute_bounding_sphere(self, tolerance=1.0):
-        """Compute a tight bounding sphere for the entire model."""
-        self._ensure_sys()
-        return self._sys.compute_bounding_sphere(tolerance)
-
-    def estimate_cell_volumes(self, n_rays=100000, center=None, radius=None):
-        """Estimate cell volumes using random ray tracing."""
-        self._ensure_query_caches()
-        if center is None or radius is None:
-            cx, cy, cz, r = self.compute_bounding_sphere()
-            if center is None:
-                center = (cx, cy, cz)
-            if radius is None:
-                radius = r
-        ox, oy, oz = center
-        return self._sys.estimate_cell_volumes(ox, oy, oz, radius, n_rays)
-
-    def estimate_instance_volumes(self, n_rays=100000):
-        """Estimate volumes per cell instance (spatial-index aware)."""
-        self._ensure_query_caches()
-        return self._sys.estimate_instance_volumes(n_rays)
-
-    def remove_cells_by_volume(self, volumes, threshold):
-        """Remove cells whose estimated volume is below a threshold."""
-        self._ensure_sys()
-        return self._sys.remove_cells_by_volume(volumes, threshold)
-
-    # =========================================================================
-    # Void Generation
-    # =========================================================================
-
-    def generate_void(self,
-                      bounds: Optional[Tuple[float, float, float, float, float, float]] = None,
-                      max_depth: int = 8,
-                      min_size: float = 0.1,
-                      probes_per_axis: int = 3,
-                      region: Optional['Region'] = None) -> 'VoidResult':
-        """Find empty space in the geometry using octree decomposition.
-
-        Identifies axis-aligned bounding boxes covering regions not occupied
-        by any cell. Useful for adding void cells to close geometry gaps.
-
-        Args:
-            bounds: Search bbox (xmin, xmax, ymin, ymax, zmin, zmax).
-                If None and region is also None, uses the system's automatic
-                bounding box.
-            max_depth: Maximum octree depth (higher = finer boxes).
-            min_size: Minimum box side length.
-            probes_per_axis: Number of probe points per axis per octree node.
-            region: Existing finite CSG region to use as the search bounds.
-                Mutually exclusive with bounds. When merging can consolidate
-                to one void cell, this region is reused instead of generating
-                a new box clip.
-
-        Returns:
-            VoidResult containing the void boxes.
-
-        Example:
-            voids = model.generate_void(bounds=(-10, 10, -10, 10, -10, 10))
-            print(f"Found {len(voids)} void boxes")
-            voids.merge()
-            print(f"After merge: {len(voids)} boxes")
-        """
-        if _alea is None:
-            raise RuntimeError("C extension not available")
-        self._ensure_sys()
-
-        if bounds is not None and region is not None:
-            raise ValueError("bounds and region are mutually exclusive")
-
-        bounds_region = None
-        if region is not None:
-            from .geometry import Region
-            if not isinstance(region, Region):
-                raise TypeError("region must be a geometry Region")
-            bounds_region = region._to_csg(self)
-
-        c_result = _alea.generate_void(
-            self._sys,
-            bounds=bounds,
-            max_depth=max_depth,
-            min_size=min_size,
-            probes_per_axis=probes_per_axis,
-            bounds_region=bounds_region,
-        )
-        return VoidResult(self, c_result)
-
-    def add_voids(self, voids: 'VoidResult') -> int:
-        """Commit generated void regions as material-0 cells.
-
-        Args:
-            voids: Result returned by this model's ``generate_void()``.
-
-        Returns:
-            Number of void cells added.
-        """
-        self._ensure_sys()
-        if not isinstance(voids, VoidResult):
-            raise TypeError("add_voids() expects a VoidResult")
-        if voids._model is not self:
-            raise ValueError("VoidResult belongs to a different Model")
-        return voids._c_result.add_cells()
-
-    def add_graveyard(self, voids: 'VoidResult') -> int:
-        """Add a graveyard cell enclosing generated void bounds.
-
-        The graveyard should be added after ``add_voids(voids)``.
-
-        Args:
-            voids: Result returned by this model's ``generate_void()``.
-
-        Returns:
-            1 on success.
-        """
-        self._ensure_sys()
-        if not isinstance(voids, VoidResult):
-            raise TypeError("add_graveyard() expects a VoidResult")
-        if voids._model is not self:
-            raise ValueError("VoidResult belongs to a different Model")
-        return voids._c_result.add_graveyard()
-
-    # =========================================================================
-    # Geometry Transforms
-    # =========================================================================
-
-    def renumber_cells(self, start_id=1):
-        """Renumber all cells with consecutive IDs."""
-        self._ensure_sys()
-        return self._sys.renumber_cells(start_id)
-
-    def renumber_surfaces(self, start_id=1):
-        """Renumber all surfaces with consecutive IDs."""
-        self._ensure_sys()
-        return self._sys.renumber_surfaces(start_id)
-
-    def offset_cell_ids(self, offset):
-        """Add an offset to all cell IDs."""
-        self._ensure_sys()
-        self._sys.offset_cell_ids(offset)
-
-    def offset_surface_ids(self, offset):
-        """Add an offset to all surface IDs."""
-        self._ensure_sys()
-        self._sys.offset_surface_ids(offset)
-
-    def offset_material_ids(self, offset):
-        """Add an offset to all material IDs."""
-        self._ensure_sys()
-        self._sys.offset_material_ids(offset)
-
-    def split_union_cells(self):
-        """Split cells with top-level unions into multiple simpler cells."""
-        self._ensure_sys()
-        return self._sys.split_union_cells()
-
-    def expand_macrobodies(self):
-        """Expand all macrobodies to primitive surfaces."""
-        self._ensure_sys()
-        return self._sys.expand_macrobodies()
-
-    def tighten_bboxes(self, tolerance=1.0):
-        """Tighten all cell bounding boxes via interval arithmetic."""
-        self._ensure_sys()
-        return self._sys.tighten_all_bboxes(tolerance)
-
-    def tighten_cell_bbox(self, cell_id, tolerance=1.0):
-        """Tighten a single cell's bounding box."""
-        self._ensure_sys()
-        idx = self._sys.cell_find(cell_id)
-        if idx is None:
-            raise KeyError(f"Cell {cell_id} not found")
-        return self._sys.tighten_cell_bbox(idx, tolerance)
-
-    def tighten_bbox_numerical(self, cell_id: int) -> None:
-        """Tighten a cell's bounding box using numerical sampling.
-
-        Fallback for cells where interval arithmetic gives loose bounds.
-
-        Args:
-            cell_id: Cell ID (MCNP cell number)
-
-        Raises:
-            KeyError: If cell not found
-            RuntimeError: On failure
-        """
-        self._ensure_sys()
-        idx = self._sys.cell_find(cell_id)
-        if idx is None:
-            raise KeyError(f"Cell {cell_id} not found")
-        self._sys.tighten_cell_bbox_numerical(idx)
-
-    # =========================================================================
-    # Configuration
-    # =========================================================================
-
-    @property
-    def config(self) -> Dict[str, Any]:
-        """Get current system configuration as a dictionary.
-
-        Returns:
-            Dict with configuration keys like 'abs_tol', 'rel_tol',
-            'log_level', 'dedup', 'export_materials', etc.
-        """
-        self._ensure_sys()
-        return self._sys.get_config()
-
-    @config.setter
-    def config(self, settings: Dict[str, Any]) -> None:
-        """Update system configuration from a dictionary.
-
-        Only provided keys are changed; others keep their current values.
-
-        Args:
-            settings: Dict of configuration keys to update.
-
-        Example:
-            model.config = {'log_level': 3, 'abs_tol': 1e-8}
-        """
-        self._ensure_sys()
-        self._sys.set_config(settings)
-
-    # =========================================================================
-    # Cell Fill Mutation
-    # =========================================================================
-
-    def set_fill(self, cell_id, fill_universe, transform=0):
-        """Set the fill universe for a cell."""
-        self._ensure_sys()
-        if fill_universe is None:
-            fill_universe = 0
-        elif fill_universe <= 0:
-            raise ValueError("fill universe must be a positive integer, or None")
-        idx = self._sys.cell_find(cell_id)
-        if idx is None:
-            raise KeyError(f"Cell {cell_id} not found")
-        self._sys.set_fill(idx, fill_universe, transform)
-
-    # =========================================================================
-    # Comprehensive Overlap Check (delegates to slicing module)
-    # =========================================================================
 
     def plot_views(self, bounds=None, save=None, **kwargs):
         """Plot three orthogonal views (XY, XZ, YZ)."""
