@@ -61,6 +61,6 @@ omit = ["*/tests/*"]
 [tool.cibuildwheel]
 build = "cp39-* cp310-* cp311-* cp312-* cp313-* cp314-*"
 skip = "*-win32 *-win_amd64 *-manylinux_i686 *-musllinux_* pp*"
-environment = { PORTABLE = "1" }
+environment = { PORTABLE = "1", MPLBACKEND = "Agg" }
 test-requires = "pytest"
 test-command = "pytest {project}/tests -x"

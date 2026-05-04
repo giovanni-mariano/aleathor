@@ -4,6 +4,15 @@
 
 """Pytest fixtures for aleathor tests."""
 
+import os
+os.environ.setdefault("MPLBACKEND", "Agg")
+
+try:
+    import matplotlib
+    matplotlib.use("Agg", force=True)
+except ImportError:
+    pass
+
 import pytest
 import math
 

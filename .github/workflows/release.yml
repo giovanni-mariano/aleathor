@@ -12,6 +12,9 @@ permissions:
   contents: read
   id-token: write
 
+env:
+  MPLBACKEND: Agg
+
 jobs:
   # ── Source distribution ──────────────────────────────────────────────
   build-sdist:
