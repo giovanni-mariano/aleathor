@@ -141,6 +141,8 @@ model.plot(
 model.plot_views(bounds=(-10, 10, -10, 10, -10, 10), save="views.png")
 ```
 
+![Material slice at z = 0](assets/tutorial_slice_materials.png)
+
 For raw slice data:
 
 ```python
@@ -205,6 +207,8 @@ For large models, `cell_aware=True` can be faster:
 ```python
 trace = model.trace(start=(-10, 0, 0), end=(10, 0, 0), cell_aware=True)
 ```
+
+![Ray trace through the model](assets/tutorial_trace.png)
 
 ## 7. Mutate Cells
 

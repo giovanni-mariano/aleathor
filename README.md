@@ -4,101 +4,63 @@
   <img src="assets/aleathor_logo.png" alt="aleathor Logo" width="400">
 </p>
 
-A Python library for debugging and analyzing large Constructive Solid Geometry (CSG) models used in neutron and gamma transport simulations.
+aleathor is a Python package for inspecting, debugging, and converting CSG
+geometry models used in particle transport workflows.
 
-While other excellent packages exist for constructing CSG geometries programmatically, aleathor focuses on **debugging, visualization, and analysis** of existing models. It can read MCNP and OpenMC geometry files, perform ray tracing, query points and nested universes, and generate cross-section plots.
+The library is aimed at existing MCNP/OpenMC-style models: load a geometry,
+query cells and materials, trace rays, inspect universe paths, plot slices, and
+export or sample the model when needed.
 
+aleathor is currently alpha software. Use it with independent checks before
+relying on conversion or analysis results in production work.
 
-**The package is still under development.**
+## Status
 
-## Disclaimer
+Current capabilities include:
 
-This package was developed with support of AI tools.
+- MCNP input loading
+- OpenMC XML loading, currently alpha
+- point queries with `cell_at()`
+- nested universe path queries with `cell_path_at()`
+- ray tracing through cells and materials
+- 2-D slice plotting
+- structured mesh sampling and export
+- MCNP, OpenMC, and Serpent export
 
-## Current Status
-
-aleathor is in alpha. The codebase supports MCNP/OpenMC loading, point queries, ray tracing, slice plotting, mesh sampling/export, and MCNP/OpenMC/Serpent export, but conversion paths and large production workflows still need broader validation.
-
-For the website version of this overview, see the [Current Status](docs/STATUS.md) page.
-
-## Key Features
-
-### Geometry Import
-
-- **MCNP Input Files**: Read complex MCNP geometry definitions including cells, surfaces, universes, and transforms
-- **OpenMC Models**: Import OpenMC XML geometry files (alpha)
-- **Automatic Surface Expansion**: Macrobodies are expanded to their constituent surfaces
-
-### Geometry Debugging
-
-- **Point Queries**: Instantly find which cell contains any point in the geometry
-- **Hierarchy Queries**: Inspect nested universe/FILL paths with `cell_path_at`
-- **Ray Tracing**: Trace rays through the model to inspect cell/material transitions and identify void or undefined regions
-- **Path Length Calculations**: Compute material-specific path lengths for shielding analysis
-- **Cell Filtering**: Query cells by material, universe, fill, or custom predicates
-
-### Visualization
-
-- **2D Slice Plots**: Generate cross-section plots along X, Y, Z, or arbitrary planes
-- **Filled Plots**: Color regions by cell ID or material
-- **Contour Control**: Draw contour lines by cell or material boundaries (`contour_by`)
-- **Tally Overlay**: Overlay mesh tally data (flux, dose) on geometry with log/linear scaling
-- **Multi-View Layouts**: Generate XY, XZ, YZ views simultaneously
-- **Ray Path Visualization**: Plot ray trajectories showing material transitions
-
-### Mesh Export
-
-- **Gmsh/VTK Export**: Export geometry as structured hexahedral meshes for visualization in Gmsh or ParaView
-- **Material Sampling**: Sample material/cell IDs on a 3D grid for analysis
-
-### CSG Optimization
-
-- **Full Simplification**: Complement elimination, double-negation removal, subtree deduplication, and more
-- **BBox Tightening**: Interval arithmetic and numerical fallback for tight bounding boxes
-- **Primitive Inspection**: Query full geometric data (centers, radii, coefficients) for any CSG leaf node
-
-### Performance
-
-- **C Backend**: Core geometry operations implemented in C for speed
-- **Large Model Support**: Query acceleration for large, nested models
-- **Efficient Queries**: Optimized data structures for fast point-in-cell lookups
-
-
+See [Current Status](docs/STATUS.md) for the detailed state of the codebase.
 
 ## Installation
 
+From a checkout:
+
 ```bash
-# Clone with submodules
 git clone --recurse-submodules https://github.com/giovanni-mariano/aleathor.git
 cd aleathor
-
-# Install in development mode
 pip install -e .
 ```
 
-### Requirements
+Requirements:
 
 - Python >= 3.9
-- C compiler (gcc or clang)
+- C compiler, such as gcc or clang
 - Make
-- matplotlib and numpy are installed with aleathor for plotting
 
-### Build options
+`matplotlib` and `numpy` are installed as package dependencies.
 
-Two environment variables control the build. They work both from source and from PyPI (using `--no-binary` to force a source build instead of downloading a prebuilt wheel).
+### Build Options
 
 | Variable | Default | Effect |
 |----------|---------|--------|
-| `PORTABLE` | `1` | When `0`, compiles with `-march=native` for maximum performance on your CPU. Do **not** distribute wheels built this way. |
-| `USE_OPENMP` | `0` | When `1`, enables OpenMP parallelism. Requires an OpenMP-capable compiler. |
+| `PORTABLE` | `1` | When `0`, compile with `-march=native`. Do not distribute wheels built this way. |
+| `USE_OPENMP` | `0` | When `1`, enable OpenMP if the compiler supports it. |
 
-From source:
+Example:
 
 ```bash
 PORTABLE=0 USE_OPENMP=1 pip install -e .
 ```
 
-From PyPI:
+For a source build from PyPI:
 
 ```bash
 PORTABLE=0 USE_OPENMP=1 pip install --no-binary aleathor aleathor
@@ -106,188 +68,135 @@ PORTABLE=0 USE_OPENMP=1 pip install --no-binary aleathor aleathor
 
 ## Quick Start
 
-### Loading and Debugging an MCNP Model
-
 ```python
 import aleathor as ath
 
-# Load an existing MCNP input file
-model = ath.load("tokamak_model.inp")
+model = ath.load("model.inp")
 
-print(f"Loaded {len(model.cells)} cells, {len(model.surfaces)} surfaces")
+print(model)
+print(f"cells: {len(model.cells)}")
+print(f"surfaces: {len(model.surfaces)}")
 
-# Find what cell contains a specific point
-cell = model.cell_at(100, 0, 0)
-if cell:
-    print(f"Point (100,0,0) is in cell {cell.id}, material {cell.material}")
-else:
-    print("Point is in void or undefined region!")
-
-# Trace a ray to check for geometry errors
-trace = model.trace(start=(-500, 0, 0), end=(500, 0, 0))
-for seg in trace:
-    if seg.cell:
-        print(f"Cell {seg.cell.id}: {seg.length:.2f} cm, material {seg.material}")
-    else:
-        print(f"VOID: {seg.length:.2f} cm  <-- potential geometry error!")
+cell = model.cell_at(0.0, 0.0, 0.0)
+if cell is not None:
+    print(cell)
 ```
 
-### Plotting Cross-Sections
+Trace a ray:
 
 ```python
-# Plot XY cross-section at z=0
-model.plot(z=0, bounds=(-100, 100, -100, 100))
+trace = model.trace(start=(-100.0, 0.0, 0.0), end=(100.0, 0.0, 0.0))
 
-# Plot by material instead of cell
-model.plot(z=0, by_material=True, show_colorbar=True)
-
-# Control contour boundaries: 'cell', 'material', or None (auto)
-# When by_material=True or overlay is set, contours auto-follow materials
-model.plot(z=0, by_material=True, contour_by='cell')  # override: cell contours
-
-# Overlay mesh tally data on geometry
-import numpy as np
-flux = np.load("flux_z0.npy")
-model.plot(z=0, bounds=(-100, 100, -100, 100),
-           overlay=flux, overlay_norm='log',
-           overlay_label='Flux [n/cm²/s]', show_colorbar=True)
-
-# Save to file
-model.plot(z=50, save="midplane.png")
-
-# Generate three orthogonal views
-model.plot_views(bounds=(-100, 100, -100, 100, -100, 100), save="views.png")
+for segment in trace:
+    print(segment.cell, segment.length, segment.material)
 ```
 
-### Analyzing Cells
+Plot a slice:
 
 ```python
-# List all materials in the model
-print(f"Materials used: {model.cells.materials()}")
-
-# Find all cells with a specific material (e.g., tungsten)
-tungsten_cells = model.cells.by_material(74)
-print(f"Found {len(tungsten_cells)} tungsten cells")
-
-# Find cells in a specific universe
-blanket_cells = model.cells.by_universe(100)
-
-# Custom filtering
-dense_cells = model.cells.filter(lambda c: abs(c.density) > 10.0)
+model.plot(z=0.0, bounds=(-100, 100, -100, 100), by_material=True)
 ```
 
-### Ray Tracing for Shielding Analysis
+Get raw slice data:
 
 ```python
-# Trace from plasma center through the blanket
-trace = model.trace(
-    origin=(0, 0, 0),
-    direction=(1, 0, 0),
-    max_distance=1000.0
+grid = model.slice.grid(
+    axis="z",
+    value=0.0,
+    bounds=(-100, 100, -100, 100),
+    resolution=(300, 300),
 )
 
-# Calculate path length through specific materials
-steel_path = trace.path_length(material=26)  # Iron/steel
-water_path = trace.path_length(material=1)   # Water
-
-print(f"Steel: {steel_path:.2f} cm, Water: {water_path:.2f} cm")
-
-# List all materials encountered
-print(f"Materials hit: {trace.materials_hit()}")
+curves = model.slice.curves(
+    axis="z",
+    value=0.0,
+    bounds=(-100, 100, -100, 100),
+)
 ```
 
-## Use Cases
+## API Shape
 
-### Fusion and Tokamak Modeling
+`Model` owns the geometry. The common API stays on `Model`:
 
-aleathor was specifically designed for debugging Tokamak-scale fusion reactor models:
+```python
+model.cells
+model.materials
+model.surfaces
 
-- Identify lost particle regions before running expensive Monte Carlo simulations
-- Verify material assignments across thousands of cells
-- Check universe fill hierarchies
+model.add_cell(...)
+model.add_material(...)
+model.cell_at(x, y, z)
+model.cell_path_at(x, y, z)
+model.trace(...)
+model.plot(...)
+model.save("out.inp")
+```
 
-### Shielding Analysis
+Advanced operations are grouped under explicit namespaces:
 
-- Trace rays from source to detector locations
-- Calculate line-of-sight path lengths through materials
-- Identify streaming paths through geometry
+```python
+model.slice.grid(...)
+model.slice.curves(...)
+model.slice.labels(grid)
 
-### Model Conversion
+model.mesh.sample(...)
+model.mesh.export("mesh.vtk", format="vtk")
 
-- Export to MCNP, OpenMC XML, and Serpent. Conversion paths are alpha and should be validated before production use.
+model.analysis.find_overlaps()
+model.analysis.estimate_cell_volumes()
 
+model.repair.simplify()
+model.repair.tighten_bboxes()
+
+model.void.generate(...)
+model.void.add(voids)
+
+model.backend.config
+```
+
+Cells and materials are live views into the model. Mutating them updates the
+backend model immediately:
+
+```python
+cell = model.cells[10]
+cell.material = 2
+cell.fill = 5
+cell.fill = None
+
+mat = model.get_material(1)
+mat.density = 10.5
+mat.add_nuclide(92235, 0.04)
+```
+
+Surfaces created in Python are immutable geometry definitions.
 
 ## Documentation
 
-The GitHub Pages documentation site is configured at:
+The documentation site is:
 
 https://giovanni-mariano.github.io/aleathor/
 
-| Document | Audience | Purpose |
-|----------|----------|---------|
-| [Tutorial](docs/TUTORIAL.md) | New users | Walk-through from loading a model to exporting results |
-| [Concepts](docs/CONCEPTS.md) | All users | User-facing geometry and API mental model |
-| [Architecture](docs/ARCHITECTURE.md) | Contributors | Contributor-facing internals and C/Python design |
-| [API Reference](docs/API.md) | All users | Every public class and function, grouped by task |
+Local documentation files:
 
-Start with the **Tutorial** if you're new. Refer to **Concepts** when something doesn't behave as you expect. The **API Reference** is for when you know what you want but forgot the method name.
-
-## Quick API Reference
-
-### Model Class
-
-```python
-model = ath.load("input.inp")     # Load from file
-model = ath.Model("name")         # Create empty model
-
-model.cells                       # CellCollection
-model.surfaces                    # Dict of surfaces
-model.cell_at(x, y, z)           # Point query
-model.trace(start, end)          # Ray trace
-model.plot(z=0)                  # Visualization
-model.save("output.inp")         # Export
-```
-
-### CellCollection
-
-```python
-model.cells.by_material(mat_id)   # Filter by material
-model.cells.by_universe(univ_id)  # Filter by universe
-model.cells.by_fill(fill_id)      # Filter by fill
-model.cells.filter(predicate)     # Custom filter
-model.cells[cell_id]              # Get by ID
-model.cells.materials()           # Unique materials
-model.cells.universes()           # Unique universes
-```
-
-### TraceResult
-
-```python
-trace = model.trace(start, end)
-len(trace)                        # Number of segments
-trace.path_length(material=1)     # Path through material
-trace.cells_hit()                 # List of cells
-trace.materials_hit()             # Set of materials
-
-for seg in trace:
-    seg.cell                      # Cell (or None for void)
-    seg.length                    # Segment length
-    seg.material                  # Material ID
-    seg.t_enter, seg.t_exit      # Entry/exit distances
-```
+- [Tutorial](docs/TUTORIAL.md)
+- [Concepts](docs/CONCEPTS.md)
+- [Architecture](docs/ARCHITECTURE.md)
+- [API Reference](docs/API.md)
+- [Current Status](docs/STATUS.md)
 
 ## Examples
 
-See the `examples/` directory:
+See `examples/`:
 
-- `basic_usage.py` - Basic geometry construction and queries
-- `advanced_surfaces.py` - All supported surface types
-- `plotting_example.py` - Visualization and cross-section plots
+- `basic_usage.py`
+- `advanced_surfaces.py`
+- `plotting_example.py`
+- `plot_geometry.py`
+
+## Development Note
+
+This package was developed with support from AI tools.
 
 ## License
 
 MPL-2.0
-
-## Contributing
-
-Contributions are welcome! Please open an issue or submit a pull request.
