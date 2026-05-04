@@ -31,9 +31,8 @@ class Cell:
     """Mutable view of a cell in the model.
 
     Provides access to cell properties and supports mutation via property
-    setters.  Mutations update the Python ``Cell`` object, mark the model
-    dirty, and invalidate the cached C info so the next read reflects the
-    change.
+    setters. Mutations are pushed to the C backend immediately and invalidate
+    this object's cached info so the next read reflects the change.
 
     Attributes:
         id: Cell ID (MCNP cell number)
@@ -41,7 +40,8 @@ class Cell:
         density: Material density
         universe: Universe this cell belongs to
         fill: Universe ID filling this cell (None if not filled)
-        region: Python Region object (None for loaded-only models)
+        region: Python Region object for Python-built cells; imported cells
+            expose a printable C-backed region when available
         importance: Particle importance (1.0 if not set)
         depth: Hierarchy depth (0 = root universe)
     """
@@ -296,7 +296,39 @@ class Cell:
         return cell_idx == self._index
 
     def __repr__(self) -> str:
-        return f"Cell({self.id}, material={self.material}, universe={self.universe})"
+        info = self._get_info()
+        fields = [f"id={info['cell_id']}"]
+
+        name = self._model._names.get(info['cell_id'])
+        if name:
+            fields.append(f"name={name!r}")
+
+        material_id = info['material_id']
+        if material_id:
+            fields.append(f"material={material_id}")
+        else:
+            fields.append("void=True")
+
+        density = info.get('density', 0.0)
+        if density:
+            fields.append(f"density={density:g}")
+            unit = "g/cm3" if info.get('is_mass_density', True) else "atoms/b-cm"
+            fields.append(f"density_unit={unit!r}")
+
+        fields.append(f"universe={info['universe_id']}")
+
+        fill = info.get('fill_universe', -1)
+        if fill >= 0:
+            fields.append(f"fill={fill}")
+
+        lat_type = info.get('lat_type', 0)
+        if lat_type:
+            fields.append(f"lattice={lat_type}")
+
+        if self._depth:
+            fields.append(f"depth={self._depth}")
+
+        return f"Cell({', '.join(fields)})"
 
     def __eq__(self, other: object) -> bool:
         if isinstance(other, Cell):

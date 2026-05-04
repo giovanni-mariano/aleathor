@@ -128,9 +128,18 @@ class Surface(ABC):
         return self.negative()
 
     def __repr__(self) -> str:
+        fields = [f"id={self.id}"]
+        for name, value in self.__dict__.items():
+            if name.startswith('_') or name in {'id', 'name', 'boundary'}:
+                continue
+            fields.append(f"{name}={value!r}")
+
+        if self.boundary != 'transmissive':
+            fields.append(f"boundary={self.boundary!r}")
         if self.name:
-            return f"{self.__class__.__name__}({self.id}, name='{self.name}')"
-        return f"{self.__class__.__name__}({self.id})"
+            fields.append(f"name={self.name!r}")
+
+        return f"{self.__class__.__name__}({', '.join(fields)})"
 
 
 class Plane(Surface):

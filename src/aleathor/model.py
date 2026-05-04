@@ -26,6 +26,29 @@ except ImportError:
 from .collections import CellCollection, Cell, TraceResult, TraceSegment, VoidResult
 
 
+_ELEMENT_SYMBOLS = (
+    None,
+    "H", "He", "Li", "Be", "B", "C", "N", "O", "F", "Ne",
+    "Na", "Mg", "Al", "Si", "P", "S", "Cl", "Ar", "K", "Ca",
+    "Sc", "Ti", "V", "Cr", "Mn", "Fe", "Co", "Ni", "Cu", "Zn",
+    "Ga", "Ge", "As", "Se", "Br", "Kr", "Rb", "Sr", "Y", "Zr",
+    "Nb", "Mo", "Tc", "Ru", "Rh", "Pd", "Ag", "Cd", "In", "Sn",
+    "Sb", "Te", "I", "Xe", "Cs", "Ba", "La", "Ce", "Pr", "Nd",
+    "Pm", "Sm", "Eu", "Gd", "Tb", "Dy", "Ho", "Er", "Tm", "Yb",
+    "Lu", "Hf", "Ta", "W", "Re", "Os", "Ir", "Pt", "Au", "Hg",
+    "Tl", "Pb", "Bi", "Po", "At", "Rn", "Fr", "Ra", "Ac", "Th",
+    "Pa", "U", "Np", "Pu", "Am", "Cm", "Bk", "Cf", "Es", "Fm",
+    "Md", "No", "Lr", "Rf", "Db", "Sg", "Bh", "Hs", "Mt", "Ds",
+    "Rg", "Cn", "Nh", "Fl", "Mc", "Lv", "Ts", "Og",
+)
+
+
+def _element_symbol(z: int) -> str:
+    if 0 < z < len(_ELEMENT_SYMBOLS):
+        return _ELEMENT_SYMBOLS[z] or f"Z{z}"
+    return f"Z{z}"
+
+
 class Material:
     """Material definition backed by the C system.
 
@@ -129,21 +152,53 @@ class Material:
         """List of elements: [{Z, library, fraction}, ...]."""
         return self._model._sys.material_get_elements(self._index)
 
+    @staticmethod
+    def _format_composition_entry(kind: str, item: Dict[str, Any]) -> str:
+        if kind == "nuclide":
+            zaid = int(item["zaid"])
+            z = zaid // 1000
+            a = zaid % 1000
+            label = f"{_element_symbol(z)}{a}"
+        else:
+            label = f"{_element_symbol(int(item['Z']))}0"
+
+        return f"{label}={item['fraction']:g}"
+
+    def _format_composition(self, limit: int = 6) -> str:
+        entries = [
+            self._format_composition_entry("nuclide", item)
+            for item in self.nuclides
+        ]
+        entries.extend(
+            self._format_composition_entry("element", item)
+            for item in self.elements
+        )
+
+        if len(entries) > limit:
+            shown = entries[:limit]
+            shown.append(f"... +{len(entries) - limit} more")
+            entries = shown
+
+        return "[" + ", ".join(entries) + "]"
+
     def __repr__(self) -> str:
-        parts = [f"Material({self._id}"]
+        fields = [f"id={self._id}"]
         if self._name:
-            parts[0] += f", name={self._name!r}"
+            fields.append(f"name={self._name!r}")
         d = self.density
         if d is not None:
-            parts[0] += f", density={d}"
+            fields.append(f"density={d:g}")
+        fraction_kind = "weight" if self.weight_fractions else "atom"
+        fields.append(f"fractions={fraction_kind!r}")
         nn = self._model._sys.material_nuclide_count(self._index)
         ne = self._model._sys.material_element_count(self._index)
         if nn > 0:
-            parts[0] += f", {nn} nuclides"
+            fields.append(f"nuclides={nn}")
         if ne > 0:
-            parts[0] += f", {ne} elements"
-        parts[0] += ")"
-        return parts[0]
+            fields.append(f"elements={ne}")
+        if nn > 0 or ne > 0:
+            fields.append(f"composition={self._format_composition()}")
+        return f"Material({', '.join(fields)})"
 
     def __eq__(self, other: object) -> bool:
         if isinstance(other, Material):

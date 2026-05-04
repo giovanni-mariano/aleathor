@@ -238,23 +238,39 @@ class TestMaterialRepr:
     def test_basic_repr(self, model):
         mat = model.add_material(1)
         r = repr(mat)
-        assert "Material(1" in r
+        assert "Material(id=1" in r
+        assert "fractions='atom'" in r
 
     def test_repr_with_name(self, model):
         mat = model.add_material(1, name="Steel")
         r = repr(mat)
-        assert "Steel" in r
+        assert "name='Steel'" in r
 
     def test_repr_with_density(self, model):
         mat = model.add_material(1, density=7.8)
         r = repr(mat)
-        assert "7.8" in r
+        assert "density=7.8" in r
 
     def test_repr_with_elements(self, model):
         mat = model.add_material(1)
         mat.add_element(26, 1.0)
         r = repr(mat)
-        assert "1 elements" in r
+        assert "elements=1" in r
+        assert "composition=[Fe0=1]" in r
+
+    def test_repr_with_weight_fractions(self, model):
+        mat = model.add_material(1)
+        mat.weight_fractions = True
+        r = repr(mat)
+        assert "fractions='weight'" in r
+
+    def test_repr_with_nuclide_composition(self, model):
+        mat = model.add_material(1)
+        mat.add_nuclide(92235, 0.05, ".80c")
+        mat.add_nuclide(92238, 0.95)
+        r = repr(mat)
+        assert "nuclides=2" in r
+        assert "composition=[U235=0.05, U238=0.95]" in r
 
 
 # ---------------------------------------------------------------------------

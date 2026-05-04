@@ -74,6 +74,48 @@ class TestPointQueryApi:
         assert not hasattr(simple_model, "cells_at")
 
 
+class TestObjectRepr:
+    """Tests for informative API object representations."""
+
+    def test_cell_repr_names_key_state(self, simple_model):
+        cell = simple_model[1]
+        r = repr(cell)
+
+        assert "Cell(id=1" in r
+        assert "name='fuel'" in r
+        assert "material=1" in r
+        assert "density=10" in r
+        assert "density_unit='g/cm3'" in r
+        assert "universe=0" in r
+
+    def test_cell_repr_shows_void_and_fill_when_present(self, simple_model):
+        cell = simple_model[1]
+        cell.material = 0
+        cell.density = 0.0
+        cell.fill = 7
+        r = repr(cell)
+
+        assert "void=True" in r
+        assert "fill=7" in r
+
+    def test_surface_repr_names_parameters(self):
+        import aleathor as ath
+
+        sphere = ath.Sphere(
+            1.0, 2.0, 3.0,
+            radius=4.0,
+            surface_id=99,
+            boundary="vacuum",
+            name="outer",
+        )
+        r = repr(sphere)
+
+        assert r == (
+            "Sphere(id=99, x0=1.0, y0=2.0, z0=3.0, radius=4.0, "
+            "boundary='vacuum', name='outer')"
+        )
+
+
 class TestSpatialIndexing:
     """Tests for spatial indexing methods."""
 
