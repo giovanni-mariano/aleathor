@@ -299,10 +299,10 @@ All slice functions take a `bounds` tuple of `(min1, max1, min2, max2)` defining
 ### Analytical Curves
 
 ```python
-model.get_slice_curves_z(z: float, bounds) -> dict
-model.get_slice_curves_y(y: float, bounds) -> dict
-model.get_slice_curves_x(x: float, bounds) -> dict
-model.get_slice_curves(origin, normal, up, bounds) -> dict
+model.slice.curves(axis="z", value=z, bounds=bounds) -> dict
+model.slice.curves(axis="y", value=y, bounds=bounds) -> dict
+model.slice.curves(axis="x", value=x, bounds=bounds) -> dict
+model.slice.curves(origin=origin, normal=normal, up=up, bounds=bounds) -> dict
 ```
 
 Return a dict with `'curves'` (list of curve dicts, each with `'type'`, `'surface_id'`, and geometry-specific fields) and bounds info.
@@ -310,11 +310,11 @@ Return a dict with `'curves'` (list of curve dicts, each with `'type'`, `'surfac
 ### Grid Queries
 
 ```python
-model.find_cells_grid(z=z, bounds=bounds, resolution=(100,100),
-                         universe_depth=-1, detect_errors=False) -> dict
-model.find_cells_grid(y=y, bounds=bounds, ...) -> dict
-model.find_cells_grid(x=x, bounds=bounds, ...) -> dict
-model.find_cells_grid(origin=origin, normal=normal, up=up, bounds=bounds, ...) -> dict
+model.slice.grid(axis="z", value=z, bounds=bounds, resolution=(100,100),
+                 universe_depth=-1, detect_errors=False) -> dict
+model.slice.grid(axis="y", value=y, bounds=bounds, ...) -> dict
+model.slice.grid(axis="x", value=x, bounds=bounds, ...) -> dict
+model.slice.grid(origin=origin, normal=normal, up=up, bounds=bounds, ...) -> dict
 ```
 
 Sample cell/material IDs on a 2D pixel grid. Returns a dict with:
@@ -334,7 +334,7 @@ Sample cell/material IDs on a 2D pixel grid. Returns a dict with:
 ### Label Positioning
 
 ```python
-model.find_label_positions(
+model.slice.labels(
     grid_result: dict,
     min_pixels: int = 100,
     by_material: bool = False,
@@ -344,7 +344,7 @@ model.find_label_positions(
 Find optimal label positions for regions in a grid. Returns list of `{'id', 'px', 'py', 'pixel_count'}`. The `min_pixels` parameter filters out tiny regions.
 
 ```python
-model.find_surface_label_positions(
+model.slice.surface_labels(
     grid_result: dict,
     margin: int = 20,
 ) -> List[dict]
@@ -355,7 +355,7 @@ Find label positions for surfaces on a slice plane. Returns list of `{'id', 'px'
 ### Overlap Checking
 
 ```python
-model.check_grid_overlaps(
+model.slice.check_overlaps(
     grid_result: dict,
     universe_depth: int = -1,
 ) -> List[int]
@@ -742,7 +742,7 @@ model.add_graveyard(voids)
 
 ## Spatial Indexing
 
-Query methods (`cell_at`, `trace`, `find_cells_grid`, `get_cells_in_bbox`, `estimate_*`, `plot`) build their acceleration caches lazily on first use. There is no public preparation entry point — you do not need to call anything before issuing queries.
+Query methods (`cell_at`, `trace`, `slice.grid`, `get_cells_in_bbox`, `estimate_*`, `plot`) build their acceleration caches lazily on first use. There is no public preparation entry point — you do not need to call anything before issuing queries.
 
 ### model.build_spatial_index
 
@@ -1142,7 +1142,7 @@ ath.get_log_level() -> int
 
 ## Module: slicing
 
-Helpers used internally by Model methods. Available for advanced use.
+Helpers used internally by `model.slice`. Available for advanced use.
 
 ```python
 from aleathor.slicing import (

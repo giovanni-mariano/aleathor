@@ -1040,29 +1040,29 @@ def plot(model: 'Model',
 
     # Get grid data for the slice.
     if z is not None:
-        grid = model.find_cells_grid(z=z, bounds=bounds, resolution=resolution,
-                                     universe_depth=universe_depth,
-                                     detect_errors=detect_errors)
+        grid = model.slice.grid(axis="z", value=z, bounds=bounds, resolution=resolution,
+                                universe_depth=universe_depth,
+                                detect_errors=detect_errors)
         xlabel, ylabel = 'X', 'Y'
         title = f'Z = {z}'
     elif y is not None:
-        grid = model.find_cells_grid(y=y, bounds=bounds, resolution=resolution,
-                                     universe_depth=universe_depth,
-                                     detect_errors=detect_errors)
+        grid = model.slice.grid(axis="y", value=y, bounds=bounds, resolution=resolution,
+                                universe_depth=universe_depth,
+                                detect_errors=detect_errors)
         xlabel, ylabel = 'X', 'Z'
         title = f'Y = {y}'
     elif x is not None:
-        grid = model.find_cells_grid(x=x, bounds=bounds, resolution=resolution,
-                                     universe_depth=universe_depth,
-                                     detect_errors=detect_errors)
+        grid = model.slice.grid(axis="x", value=x, bounds=bounds, resolution=resolution,
+                                universe_depth=universe_depth,
+                                detect_errors=detect_errors)
         xlabel, ylabel = 'Y', 'Z'
         title = f'X = {x}'
     elif origin is not None and normal is not None:
         if up is None:
             up = (0, 0, 1)
-        grid = model.find_cells_grid(origin=origin, normal=normal, up=up, bounds=bounds, resolution=resolution,
-                                     universe_depth=universe_depth,
-                                     detect_errors=detect_errors)
+        grid = model.slice.grid(origin=origin, normal=normal, up=up, bounds=bounds, resolution=resolution,
+                                universe_depth=universe_depth,
+                                detect_errors=detect_errors)
         xlabel, ylabel = 'U', 'V'
         title = f'Plane at {origin}'
     else:
@@ -1121,13 +1121,13 @@ def plot(model: 'Model',
                                   facecolor=color, alpha=0.6))
 
         if show_cell_labels:
-            _draw(model.find_label_positions(grid, min_pixels=label_min_pixels,
-                                             by_material=False), 'C', 'black')
+            _draw(model.slice.labels(grid, min_pixels=label_min_pixels,
+                                     by_material=False), 'C', 'black')
         if show_material_labels:
-            _draw(model.find_label_positions(grid, min_pixels=label_min_pixels,
-                                             by_material=True), 'M', 'black')
+            _draw(model.slice.labels(grid, min_pixels=label_min_pixels,
+                                     by_material=True), 'M', 'black')
         if show_surface_labels:
-            _draw(model.find_surface_label_positions(grid, margin=label_margin),
+            _draw(model.slice.surface_labels(grid, margin=label_margin),
                   'S', 'darkred')
 
     if save:

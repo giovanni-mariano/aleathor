@@ -252,6 +252,33 @@ class TestMultiCellFiltering:
 class TestCellMutation:
     """Tests for Cell property setters and fill methods."""
 
+    def test_default_fill_is_none(self, simple_model):
+        """A normal cell should not look filled."""
+        cell = simple_model[1]
+        assert cell.fill is None
+        assert not cell.is_filled
+        assert "fill=0" not in repr(cell)
+        assert simple_model.cells.by_fill().ids() == []
+
+    def test_fill_zero_is_not_a_public_universe(self, simple_model):
+        """The public API uses None, not 0, to mean no fill."""
+        cell = simple_model[1]
+
+        with pytest.raises(ValueError):
+            cell.fill = 0
+        with pytest.raises(ValueError):
+            cell.fill_with(0)
+        with pytest.raises(ValueError):
+            simple_model.cells.by_fill(0)
+        with pytest.raises(ValueError):
+            simple_model.get_cells_filling_universe(0)
+        with pytest.raises(ValueError):
+            simple_model.set_fill(1, 0)
+
+        simple_model.set_fill(1, 5)
+        simple_model.set_fill(1, None)
+        assert cell.fill is None
+
     def test_set_material(self, simple_model):
         """Setting material via Cell should update the cell."""
         cell = simple_model[1]
@@ -340,10 +367,9 @@ class TestCellMutation:
         assert cell.fill == 5
 
     def test_set_fill_syncs_python_cell(self, simple_model):
-        """Model.set_fill() should sync the Python Cell so fill survives rebuild."""
+        """Model.set_fill() should sync the Python Cell."""
         simple_model.set_fill(1, 8)
 
-        # Force rebuild by mutating another cell
         simple_model.update_cell(2, material=99)
 
         cell = simple_model[1]
@@ -356,3 +382,19 @@ class TestCellMutation:
         # Re-read from C to verify
         cell2 = simple_model[1]
         assert cell2.material == 50
+
+
+class TestLoadedModelMetadata:
+    """Tests for metadata reconstructed from imported models."""
+
+    def test_loaded_model_surfaces_are_available(self):
+        """Loading MCNP should expose referenced surfaces through model.surfaces."""
+        from pathlib import Path
+        import aleathor as ath
+
+        path = Path(__file__).parent / "data" / "sphere_simple.inp"
+        model = ath.load(path)
+
+        assert len(model.surfaces) == model._sys.surface_count
+        assert 1 in model.surfaces
+        assert model.surfaces[1].id == 1

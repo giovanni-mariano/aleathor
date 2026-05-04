@@ -132,7 +132,10 @@ def _populate_regions(model: Model, sys) -> None:
     sys.build_universe_index()
     for cell_info in sys.get_cells():
         cell_id = cell_info['cell_id']
-        model._regions[cell_id] = _ImportedRegion(sys, cell_info['root_node'])
+        region = _ImportedRegion(sys, cell_info['root_node'])
+        model._regions[cell_id] = region
+        for surface in region.get_surfaces():
+            model._surfaces[surface.id] = surface
 
 
 def write_mcnp(model: Model, filename: Union[str, Path]) -> None:
@@ -250,5 +253,4 @@ class _ImportedRegion(Region):
         return repr(self.tree)
 
 
-# Backward compatibility alias
 _PlaceholderRegion = _ImportedRegion

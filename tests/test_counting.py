@@ -14,7 +14,7 @@ class TestCountSurfaces:
         """Should count unique surfaces in the slice."""
         from aleathor import count_surfaces
 
-        curves = simple_model.get_slice_curves_z(0, bounds_xy)
+        curves = simple_model.slice.curves(axis="z", value=0, bounds=bounds_xy)
         n_surfaces = count_surfaces(curves)
 
         # Simple model has sphere and box (4 planes for box + 1 sphere)
@@ -25,7 +25,7 @@ class TestCountSurfaces:
         """Should count multiple sphere surfaces."""
         from aleathor import count_surfaces
 
-        curves = multi_cell_model.get_slice_curves_z(0, bounds_xy)
+        curves = multi_cell_model.slice.curves(axis="z", value=0, bounds=bounds_xy)
         n_surfaces = count_surfaces(curves)
 
         # 3 concentric spheres + box surfaces
@@ -54,7 +54,7 @@ class TestCountCells:
         """Should count unique cells in the grid."""
         from aleathor import count_cells
 
-        grid = simple_model.find_cells_grid(z=0, bounds=bounds_xy, resolution=(50, 50))
+        grid = simple_model.slice.grid(axis="z", value=0, bounds=bounds_xy, resolution=(50, 50))
         n_cells = count_cells(grid)
 
         # Simple model has 2 cells (fuel + moderator)
@@ -66,7 +66,7 @@ class TestCountCells:
 
         # Grid partially outside geometry
         bounds = (-15, 15, -15, 15)
-        grid = simple_model.find_cells_grid(z=0, bounds=bounds, resolution=(50, 50))
+        grid = simple_model.slice.grid(axis="z", value=0, bounds=bounds, resolution=(50, 50))
         n_cells = count_cells(grid)
 
         # Should still be 2 cells, void not counted
@@ -76,7 +76,7 @@ class TestCountCells:
         """Should count all cells in multi-cell model."""
         from aleathor import count_cells
 
-        grid = multi_cell_model.find_cells_grid(z=0, bounds=bounds_xy, resolution=(50, 50))
+        grid = multi_cell_model.slice.grid(axis="z", value=0, bounds=bounds_xy, resolution=(50, 50))
         n_cells = count_cells(grid)
 
         # 4 concentric regions
@@ -104,7 +104,7 @@ class TestCountMaterials:
         """Should count unique materials in the grid."""
         from aleathor import count_materials
 
-        grid = simple_model.find_cells_grid(z=0, bounds=bounds_xy, resolution=(50, 50))
+        grid = simple_model.slice.grid(axis="z", value=0, bounds=bounds_xy, resolution=(50, 50))
         n_materials = count_materials(grid)
 
         # Simple model has 2 materials (1 and 2)
@@ -115,7 +115,7 @@ class TestCountMaterials:
         from aleathor import count_materials
 
         bounds = (-15, 15, -15, 15)
-        grid = simple_model.find_cells_grid(z=0, bounds=bounds, resolution=(50, 50))
+        grid = simple_model.slice.grid(axis="z", value=0, bounds=bounds, resolution=(50, 50))
         n_materials = count_materials(grid)
 
         # Still 2 materials
@@ -125,7 +125,7 @@ class TestCountMaterials:
         """Should count all materials in multi-cell model."""
         from aleathor import count_materials
 
-        grid = multi_cell_model.find_cells_grid(z=0, bounds=bounds_xy, resolution=(50, 50))
+        grid = multi_cell_model.slice.grid(axis="z", value=0, bounds=bounds_xy, resolution=(50, 50))
         n_materials = count_materials(grid)
 
         # 4 different materials
@@ -146,8 +146,8 @@ class TestGetSliceStats:
         """Should return dict with cells, surfaces, materials."""
         from aleathor import get_slice_stats
 
-        curves = simple_model.get_slice_curves_z(0, bounds_xy)
-        grid = simple_model.find_cells_grid(z=0, bounds=bounds_xy, resolution=(50, 50))
+        curves = simple_model.slice.curves(axis="z", value=0, bounds=bounds_xy)
+        grid = simple_model.slice.grid(axis="z", value=0, bounds=bounds_xy, resolution=(50, 50))
 
         stats = get_slice_stats(curves, grid)
 
@@ -159,8 +159,8 @@ class TestGetSliceStats:
         """All counts should be integers."""
         from aleathor import get_slice_stats
 
-        curves = simple_model.get_slice_curves_z(0, bounds_xy)
-        grid = simple_model.find_cells_grid(z=0, bounds=bounds_xy, resolution=(50, 50))
+        curves = simple_model.slice.curves(axis="z", value=0, bounds=bounds_xy)
+        grid = simple_model.slice.grid(axis="z", value=0, bounds=bounds_xy, resolution=(50, 50))
 
         stats = get_slice_stats(curves, grid)
 
@@ -172,8 +172,8 @@ class TestGetSliceStats:
         """Stats should match individual count functions."""
         from aleathor import get_slice_stats, count_cells, count_surfaces, count_materials
 
-        curves = simple_model.get_slice_curves_z(0, bounds_xy)
-        grid = simple_model.find_cells_grid(z=0, bounds=bounds_xy, resolution=(50, 50))
+        curves = simple_model.slice.curves(axis="z", value=0, bounds=bounds_xy)
+        grid = simple_model.slice.grid(axis="z", value=0, bounds=bounds_xy, resolution=(50, 50))
 
         stats = get_slice_stats(curves, grid)
 
@@ -185,8 +185,8 @@ class TestGetSliceStats:
         """Should work correctly with multi-cell model."""
         from aleathor import get_slice_stats
 
-        curves = multi_cell_model.get_slice_curves_z(0, bounds_xy)
-        grid = multi_cell_model.find_cells_grid(z=0, bounds=bounds_xy, resolution=(50, 50))
+        curves = multi_cell_model.slice.curves(axis="z", value=0, bounds=bounds_xy)
+        grid = multi_cell_model.slice.grid(axis="z", value=0, bounds=bounds_xy, resolution=(50, 50))
 
         stats = get_slice_stats(curves, grid)
 

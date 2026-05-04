@@ -260,24 +260,24 @@ def render_plot(model, params: PlotParams, verbose: bool = False) -> bool:
 
     # Get grid data (this is the only query needed - contours are derived from grid)
     if params.slice_type == 'Z':
-        grid = model.find_cells_grid(z=params.value, bounds=bounds, resolution=resolution,
+        grid = model.slice.grid(axis="z", value=params.value, bounds=bounds, resolution=resolution,
                                      detect_errors=params.detect_errors)
         xlabel, ylabel = 'X', 'Y'
         title = f'Z = {params.value:.4g}'
     elif params.slice_type == 'Y':
-        grid = model.find_cells_grid(y=params.value, bounds=bounds, resolution=resolution,
+        grid = model.slice.grid(axis="y", value=params.value, bounds=bounds, resolution=resolution,
                                      detect_errors=params.detect_errors)
         xlabel, ylabel = 'X', 'Z'
         title = f'Y = {params.value:.4g}'
     elif params.slice_type == 'X':
-        grid = model.find_cells_grid(x=params.value, bounds=bounds, resolution=resolution,
+        grid = model.slice.grid(axis="x", value=params.value, bounds=bounds, resolution=resolution,
                                      detect_errors=params.detect_errors)
         xlabel, ylabel = 'Y', 'Z'
         title = f'X = {params.value:.4g}'
     elif params.slice_type == 'PLANE':
-        grid = model.find_cells_grid(origin=params.origin, normal=params.normal, up=params.up,
-                                     bounds=bounds, resolution=resolution,
-                                     detect_errors=params.detect_errors)
+        grid = model.slice.grid(origin=params.origin, normal=params.normal, up=params.up,
+                                bounds=bounds, resolution=resolution,
+                                detect_errors=params.detect_errors)
         xlabel, ylabel = 'U', 'V'
         title = f'Plane at {params.origin}'
     else:
@@ -306,7 +306,7 @@ def render_plot(model, params: PlotParams, verbose: bool = False) -> bool:
 
     # Add labels if requested
     if params.show_cell_labels or params.show_material_labels:
-        labels = model.find_label_positions(grid, min_pixels=100,
+        labels = model.slice.labels(grid, min_pixels=100,
                                             by_material=params.show_material_labels)
 
         # Determine grid dimensions

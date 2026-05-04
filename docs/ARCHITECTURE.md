@@ -79,7 +79,7 @@ This is important: loaded models don't duplicate geometry in Python. The `Cell` 
 ## Query Cache Lifecycle
 
 ```
-cell_at() / trace() / find_cells_grid() / plot()
+cell_at() / trace() / slice.grid() / plot()
         │
         ▼
     _ensure_query_caches()
@@ -180,7 +180,7 @@ def _extract_slice_params(grid_result):
         # Arbitrary plane: direct extraction
 ```
 
-Model methods that delegate to `slicing.py` are: `find_label_positions`, `find_surface_label_positions`, `check_grid_overlaps`. These are the only methods that use the delegate pattern — justified because they contain non-trivial dispatch logic.
+Slice methods that delegate to `slicing.py` are: `slice.labels`, `slice.surface_labels`, and `slice.check_overlaps`. These are justified because they contain non-trivial dispatch logic over the grid result shape.
 
 ## The Plotting Module
 
@@ -188,7 +188,7 @@ Model methods that delegate to `slicing.py` are: `find_label_positions`, `find_s
 
 The key functions are:
 
-- `plot()`: high-level orchestrator. Calls `find_cells_grid()` and the appropriate `get_slice_curves_*()`, then delegates to `plot_slice_filled()` or `plot_slice_curves()`.
+- `plot()`: high-level orchestrator. Calls `slice.grid()`, then delegates to `plot_slice_filled()` or `plot_slice_curves()`.
 - `plot_views()`: creates a 1x3 subplot figure with XY, XZ, YZ slices.
 - `plot_slice_filled()`: the workhorse. Takes a grid result, creates an image with cell/material coloring, overlays contour lines, handles error highlighting, and supports tally overlay.
 

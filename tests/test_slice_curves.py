@@ -13,7 +13,7 @@ class TestSliceCurvesZ:
 
     def test_returns_dict_with_curves(self, simple_model, bounds_xy):
         """Slice curves result should contain 'curves' key."""
-        result = simple_model.get_slice_curves_z(0, bounds_xy)
+        result = simple_model.slice.curves(axis="z", value=0, bounds=bounds_xy)
 
         assert isinstance(result, dict)
         assert 'curves' in result
@@ -21,7 +21,7 @@ class TestSliceCurvesZ:
 
     def test_sphere_slice_has_circle(self, simple_model, bounds_xy):
         """Slicing a sphere at z=0 should produce a circle curve."""
-        result = simple_model.get_slice_curves_z(0, bounds_xy)
+        result = simple_model.slice.curves(axis="z", value=0, bounds=bounds_xy)
 
         # Should have at least one circle (the sphere)
         circles = [c for c in result['curves'] if c.get('type') == 'circle']
@@ -29,7 +29,7 @@ class TestSliceCurvesZ:
 
     def test_sphere_circle_has_correct_radius(self, simple_model, bounds_xy):
         """Circle from sphere slice should have radius 5 at z=0."""
-        result = simple_model.get_slice_curves_z(0, bounds_xy)
+        result = simple_model.slice.curves(axis="z", value=0, bounds=bounds_xy)
 
         circles = [c for c in result['curves'] if c.get('type') == 'circle']
         # Find the sphere circle (radius 5)
@@ -38,7 +38,7 @@ class TestSliceCurvesZ:
 
     def test_slice_above_sphere_has_no_sphere_curve(self, simple_model, bounds_xy):
         """Slicing above the sphere (z=6) should not show the sphere."""
-        result = simple_model.get_slice_curves_z(6, bounds_xy)
+        result = simple_model.slice.curves(axis="z", value=6, bounds=bounds_xy)
 
         # Sphere radius is 5, so at z=6 there's no intersection
         circles = [c for c in result['curves'] if c.get('type') == 'circle']
@@ -47,7 +47,7 @@ class TestSliceCurvesZ:
 
     def test_slice_near_top_has_small_circle(self, simple_model, bounds_xy):
         """Slicing near top of sphere should produce smaller circle."""
-        result = simple_model.get_slice_curves_z(4, bounds_xy)
+        result = simple_model.slice.curves(axis="z", value=4, bounds=bounds_xy)
 
         # At z=4, sphere of radius 5 gives circle radius sqrt(25-16) = 3
         circles = [c for c in result['curves'] if c.get('type') == 'circle']
@@ -56,7 +56,7 @@ class TestSliceCurvesZ:
 
     def test_bounds_info_included(self, simple_model, bounds_xy):
         """Result should include bounds information."""
-        result = simple_model.get_slice_curves_z(0, bounds_xy)
+        result = simple_model.slice.curves(axis="z", value=0, bounds=bounds_xy)
 
         assert 'x_min' in result or 'u_min' in result
         assert 'x_max' in result or 'u_max' in result
@@ -68,7 +68,7 @@ class TestSliceCurvesY:
     def test_returns_curves(self, simple_model):
         """XZ slice should return curves."""
         bounds = (-10, 10, -10, 10)  # x_min, x_max, z_min, z_max
-        result = simple_model.get_slice_curves_y(0, bounds)
+        result = simple_model.slice.curves(axis="y", value=0, bounds=bounds)
 
         assert isinstance(result, dict)
         assert 'curves' in result
@@ -76,7 +76,7 @@ class TestSliceCurvesY:
     def test_sphere_produces_circle(self, simple_model):
         """Sphere sliced in XZ plane should produce circle."""
         bounds = (-10, 10, -10, 10)
-        result = simple_model.get_slice_curves_y(0, bounds)
+        result = simple_model.slice.curves(axis="y", value=0, bounds=bounds)
 
         circles = [c for c in result['curves'] if c.get('type') == 'circle']
         assert len(circles) >= 1
@@ -88,7 +88,7 @@ class TestSliceCurvesX:
     def test_returns_curves(self, simple_model):
         """YZ slice should return curves."""
         bounds = (-10, 10, -10, 10)  # y_min, y_max, z_min, z_max
-        result = simple_model.get_slice_curves_x(0, bounds)
+        result = simple_model.slice.curves(axis="x", value=0, bounds=bounds)
 
         assert isinstance(result, dict)
         assert 'curves' in result
@@ -104,7 +104,7 @@ class TestSliceCurvesArbitrary:
         up = (0, 0, 1)
         bounds = (-10, 10, -10, 10)
 
-        result = simple_model.get_slice_curves(origin, normal, up, bounds)
+        result = simple_model.slice.curves(origin=origin, normal=normal, up=up, bounds=bounds)
 
         assert isinstance(result, dict)
         assert 'curves' in result
@@ -116,7 +116,7 @@ class TestSliceCurvesArbitrary:
         up = (0, 0, 1)
         bounds = (-10, 10, -10, 10)
 
-        result = simple_model.get_slice_curves(origin, normal, up, bounds)
+        result = simple_model.slice.curves(origin=origin, normal=normal, up=up, bounds=bounds)
 
         circles = [c for c in result['curves'] if c.get('type') == 'circle']
         assert len(circles) >= 1
@@ -129,7 +129,7 @@ class TestSliceCurvesArbitrary:
         up = (0, math.cos(tilt), -math.sin(tilt))
         bounds = (-10, 10, -10, 10)
 
-        result = simple_model.get_slice_curves(origin, normal, up, bounds)
+        result = simple_model.slice.curves(origin=origin, normal=normal, up=up, bounds=bounds)
 
         assert isinstance(result, dict)
         assert 'curves' in result
@@ -140,7 +140,7 @@ class TestCylinderSlices:
 
     def test_z_slice_cylinder_produces_circle(self, cylinder_model, bounds_xy):
         """Z slice of vertical cylinder should produce circle."""
-        result = cylinder_model.get_slice_curves_z(0, bounds_xy)
+        result = cylinder_model.slice.curves(axis="z", value=0, bounds=bounds_xy)
 
         circles = [c for c in result['curves'] if c.get('type') == 'circle']
         # Should have cylinder circle with radius 3
@@ -150,7 +150,7 @@ class TestCylinderSlices:
     def test_y_slice_cylinder_produces_lines(self, cylinder_model):
         """Y slice of vertical cylinder should produce lines, not circles."""
         bounds = (-10, 10, -5, 5)
-        result = cylinder_model.get_slice_curves_y(0, bounds)
+        result = cylinder_model.slice.curves(axis="y", value=0, bounds=bounds)
 
         # XZ slice of Z-cylinder produces two vertical lines (as parallel_lines type)
         lines = [c for c in result['curves'] if c.get('type') in ('line', 'line_segment', 'parallel_lines')]
@@ -162,7 +162,7 @@ class TestMultipleSurfaces:
 
     def test_concentric_spheres_produce_multiple_circles(self, multi_cell_model, bounds_xy):
         """Concentric spheres should produce multiple circles."""
-        result = multi_cell_model.get_slice_curves_z(0, bounds_xy)
+        result = multi_cell_model.slice.curves(axis="z", value=0, bounds=bounds_xy)
 
         circles = [c for c in result['curves'] if c.get('type') == 'circle']
         # Should have 3 circles (radii 2, 4, 6)
@@ -170,7 +170,7 @@ class TestMultipleSurfaces:
 
     def test_circles_have_correct_radii(self, multi_cell_model, bounds_xy):
         """Circles should have correct radii."""
-        result = multi_cell_model.get_slice_curves_z(0, bounds_xy)
+        result = multi_cell_model.slice.curves(axis="z", value=0, bounds=bounds_xy)
 
         circles = [c for c in result['curves'] if c.get('type') == 'circle']
         radii = sorted([c['radius'] for c in circles])

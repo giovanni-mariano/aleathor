@@ -144,8 +144,9 @@ model.plot_views(bounds=(-10, 10, -10, 10, -10, 10), save="views.png")
 For raw slice data:
 
 ```python
-grid = model.find_cells_grid(
-    z=0,
+grid = model.slice.grid(
+    axis="z",
+    value=0,
     bounds=(-10, 10, -10, 10),
     resolution=(200, 200),
 )
@@ -289,14 +290,15 @@ for c1, c2 in model.find_overlaps():
 Slice-level checks can mark overlap or undefined pixels:
 
 ```python
-grid = model.find_cells_grid(
-    z=0,
+grid = model.slice.grid(
+    axis="z",
+    value=0,
     bounds=(-10, 10, -10, 10),
     resolution=(200, 200),
     detect_errors=True,
 )
 
-errors = model.check_grid_overlaps(grid)
+errors = model.slice.check_overlaps(grid)
 ```
 
 ## 11. Mesh Sampling And Export

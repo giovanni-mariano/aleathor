@@ -255,6 +255,132 @@ class _CellData:
         return self.fill is not None
 
 
+class SliceApi:
+    """Slice operations for a model."""
+
+    def __init__(self, model: 'Model'):
+        self._model = model
+
+    @staticmethod
+    def _axis_value(axis: Optional[str], value: Optional[float]) -> Tuple[Optional[str], Optional[float]]:
+        if axis is None:
+            return None, value
+        axis = axis.lower()
+        if axis not in ("x", "y", "z"):
+            raise ValueError("axis must be 'x', 'y', or 'z'")
+        if value is None:
+            raise ValueError("value is required when axis is specified")
+        return axis, value
+
+    def curves(self, *, axis: Optional[str] = None, value: Optional[float] = None,
+               origin: Optional[Tuple[float, float, float]] = None,
+               normal: Optional[Tuple[float, float, float]] = None,
+               up: Optional[Tuple[float, float, float]] = None,
+               bounds: Optional[Tuple[float, float, float, float]] = None) -> Dict[str, Any]:
+        """Get analytical curves for an axis-aligned or arbitrary slice."""
+        model = self._model
+        model._ensure_query_caches()
+        if bounds is None:
+            raise ValueError("bounds is required")
+
+        axis, value = self._axis_value(axis, value)
+        has_axis = axis is not None
+        has_plane = origin is not None or normal is not None
+        if int(has_axis) + int(has_plane) != 1:
+            raise ValueError("Specify either axis+value or origin+normal")
+
+        if axis == "z":
+            x_min, x_max, y_min, y_max = bounds
+            return model._sys.get_slice_curves_z(value, x_min, x_max, y_min, y_max)
+        if axis == "y":
+            x_min, x_max, z_min, z_max = bounds
+            return model._sys.get_slice_curves_y(value, x_min, x_max, z_min, z_max)
+        if axis == "x":
+            y_min, y_max, z_min, z_max = bounds
+            return model._sys.get_slice_curves_x(value, y_min, y_max, z_min, z_max)
+
+        if origin is None or normal is None:
+            raise ValueError("origin and normal are required for an arbitrary slice")
+        if up is None:
+            up = (0, 0, 1)
+        u_min, u_max, v_min, v_max = bounds
+        return model._sys.get_slice_curves(
+            origin, normal, up, u_min, u_max, v_min, v_max
+        )
+
+    def grid(self, *, axis: Optional[str] = None, value: Optional[float] = None,
+             origin: Optional[Tuple[float, float, float]] = None,
+             normal: Optional[Tuple[float, float, float]] = None,
+             up: Optional[Tuple[float, float, float]] = None,
+             bounds: Optional[Tuple[float, float, float, float]] = None,
+             resolution: Tuple[int, int] = (100, 100),
+             universe_depth: int = -1,
+             detect_errors: bool = False) -> Dict[str, Any]:
+        """Sample cells/materials on an axis-aligned or arbitrary slice grid."""
+        model = self._model
+        model._ensure_query_caches()
+        if bounds is None:
+            raise ValueError("bounds is required")
+
+        axis, value = self._axis_value(axis, value)
+        has_axis = axis is not None
+        has_plane = origin is not None or normal is not None
+        if int(has_axis) + int(has_plane) != 1:
+            raise ValueError("Specify either axis+value or origin+normal")
+
+        if axis == "z":
+            x_min, x_max, y_min, y_max = bounds
+            nx, ny = resolution
+            return model._sys.find_cells_grid_z(
+                value, x_min, x_max, y_min, y_max, nx, ny,
+                universe_depth=universe_depth,
+                detect_errors=detect_errors,
+            )
+        if axis == "y":
+            x_min, x_max, z_min, z_max = bounds
+            nx, nz = resolution
+            return model._sys.find_cells_grid_y(
+                value, x_min, x_max, z_min, z_max, nx, nz,
+                universe_depth=universe_depth,
+                detect_errors=detect_errors,
+            )
+        if axis == "x":
+            y_min, y_max, z_min, z_max = bounds
+            ny, nz = resolution
+            return model._sys.find_cells_grid_x(
+                value, y_min, y_max, z_min, z_max, ny, nz,
+                universe_depth=universe_depth,
+                detect_errors=detect_errors,
+            )
+
+        if origin is None or normal is None:
+            raise ValueError("origin and normal are required for an arbitrary slice")
+        if up is None:
+            up = (0, 0, 1)
+        u_min, u_max, v_min, v_max = bounds
+        nu, nv = resolution
+        return model._sys.find_cells_grid(
+            origin, normal, up, u_min, u_max, v_min, v_max, nu, nv,
+            universe_depth=universe_depth,
+            detect_errors=detect_errors,
+        )
+
+    def labels(self, grid_result, min_pixels=100, by_material=False):
+        """Find optimal cell/material label positions for a slice grid."""
+        from .slicing import find_label_positions
+        return find_label_positions(self._model, grid_result, min_pixels, by_material)
+
+    def surface_labels(self, grid_result, margin=20):
+        """Find optimal surface label positions for a slice grid."""
+        from .slicing import find_surface_label_positions
+        return find_surface_label_positions(self._model, grid_result, margin)
+
+    def check_overlaps(self, grid_result, universe_depth=-1):
+        """Run comprehensive overlap detection on a slice grid."""
+        from .slicing import check_grid_overlaps
+        return check_grid_overlaps(self._model, grid_result, universe_depth)
+
+
 @dataclass
 class Universe:
     """Universe definition.
@@ -548,6 +674,8 @@ class Model:
             raise ValueError(
                 f"density_unit must be 'g/cm3' or 'atoms/b-cm', got {density_unit!r}"
             )
+        if fill is not None and fill <= 0:
+            raise ValueError("fill universe must be a positive integer, or None")
 
         # Accept Material object or int
         if isinstance(material, Material):
@@ -730,6 +858,11 @@ class Model:
         Returns a dictionary mapping surface IDs to Surface objects.
         """
         return dict(self._surfaces)
+
+    @property
+    def slice(self) -> SliceApi:
+        """Slice operations."""
+        return SliceApi(self)
 
     # =========================================================================
     # Material Management
@@ -1032,93 +1165,6 @@ class Model:
         return self._sys.mesh_sample(**kwargs)
 
     # =========================================================================
-    # Analytical Slice API
-    # =========================================================================
-
-    def get_slice_curves_z(self, z: float, bounds: Tuple[float, float, float, float]) -> Dict[str, Any]:
-        """Get analytical curves for XY slice at z=constant."""
-        self._ensure_sys()
-        x_min, x_max, y_min, y_max = bounds
-        return self._sys.get_slice_curves_z(z, x_min, x_max, y_min, y_max)
-
-    def get_slice_curves_y(self, y: float, bounds: Tuple[float, float, float, float]) -> Dict[str, Any]:
-        """Get analytical curves for XZ slice at y=constant."""
-        self._ensure_query_caches()
-        x_min, x_max, z_min, z_max = bounds
-        return self._sys.get_slice_curves_y(y, x_min, x_max, z_min, z_max)
-
-    def get_slice_curves_x(self, x: float, bounds: Tuple[float, float, float, float]) -> Dict[str, Any]:
-        """Get analytical curves for YZ slice at x=constant."""
-        self._ensure_query_caches()
-        y_min, y_max, z_min, z_max = bounds
-        return self._sys.get_slice_curves_x(x, y_min, y_max, z_min, z_max)
-
-    def get_slice_curves(self, origin: Tuple[float, float, float],
-                         normal: Tuple[float, float, float],
-                         up: Tuple[float, float, float],
-                         bounds: Tuple[float, float, float, float]) -> Dict[str, Any]:
-        """Get analytical curves for arbitrary plane slice."""
-        self._ensure_query_caches()
-        u_min, u_max, v_min, v_max = bounds
-        return self._sys.get_slice_curves(origin, normal, up, u_min, u_max, v_min, v_max)
-
-    def find_cells_grid(self, origin=None, normal=None, up=None, bounds=None,
-                        resolution=(100, 100), universe_depth=-1, detect_errors=False,
-                        *, z=None, y=None, x=None):
-        """Sample cells/materials on a 2D grid for an axis-aligned or arbitrary slice.
-
-        Specify exactly one of:
-        - ``z`` for an XY slice at z=constant
-        - ``y`` for an XZ slice at y=constant
-        - ``x`` for a YZ slice at x=constant
-        - ``origin`` and ``normal`` for an arbitrary plane
-        """
-        self._ensure_query_caches()
-
-        plane_count = sum(value is not None for value in (z, y, x))
-        has_arbitrary_plane = origin is not None or normal is not None
-        if plane_count + int(has_arbitrary_plane) != 1:
-            raise ValueError("Specify exactly one of z, y, x, or origin+normal")
-        if bounds is None:
-            raise ValueError("bounds is required")
-
-        if z is not None:
-            x_min, x_max, y_min, y_max = bounds
-            nx, ny = resolution
-            return self._sys.find_cells_grid_z(z, x_min, x_max, y_min, y_max, nx, ny,
-                                               universe_depth=universe_depth,
-                                               detect_errors=detect_errors)
-
-        if y is not None:
-            x_min, x_max, z_min, z_max = bounds
-            nx, nz = resolution
-            return self._sys.find_cells_grid_y(y, x_min, x_max, z_min, z_max, nx, nz,
-                                               universe_depth=universe_depth,
-                                               detect_errors=detect_errors)
-
-        if x is not None:
-            y_min, y_max, z_min, z_max = bounds
-            ny, nz = resolution
-            return self._sys.find_cells_grid_x(x, y_min, y_max, z_min, z_max, ny, nz,
-                                               universe_depth=universe_depth,
-                                               detect_errors=detect_errors)
-
-        if origin is None or normal is None:
-            raise ValueError("origin and normal are required for an arbitrary plane")
-        if up is None:
-            up = (0, 0, 1)
-        u_min, u_max, v_min, v_max = bounds
-        nu, nv = resolution
-        return self._sys.find_cells_grid(origin, normal, up, u_min, u_max, v_min, v_max, nu, nv,
-                                         universe_depth=universe_depth,
-                                         detect_errors=detect_errors)
-
-    def find_label_positions(self, grid_result, min_pixels=100, by_material=False):
-        """Find optimal label positions for regions in a grid."""
-        from .slicing import find_label_positions
-        return find_label_positions(self, grid_result, min_pixels, by_material)
-
-    # =========================================================================
     # Validation
     # =========================================================================
 
@@ -1278,6 +1324,8 @@ class Model:
             List of cell indices
         """
         self._ensure_sys()
+        if universe_id <= 0:
+            raise ValueError("fill universe must be a positive integer")
         return self._sys.get_cells_filling_universe(universe_id)
 
     def get_cells_in_bbox(self, bounds: Tuple[float, float, float, float, float, float]) -> List[int]:
@@ -1705,6 +1753,10 @@ class Model:
     def set_fill(self, cell_id, fill_universe, transform=0):
         """Set the fill universe for a cell."""
         self._ensure_sys()
+        if fill_universe is None:
+            fill_universe = 0
+        elif fill_universe <= 0:
+            raise ValueError("fill universe must be a positive integer, or None")
         idx = self._sys.cell_find(cell_id)
         if idx is None:
             raise KeyError(f"Cell {cell_id} not found")
@@ -1713,16 +1765,6 @@ class Model:
     # =========================================================================
     # Comprehensive Overlap Check (delegates to slicing module)
     # =========================================================================
-
-    def check_grid_overlaps(self, grid_result, universe_depth=-1):
-        """Run comprehensive overlap detection on a previously computed grid."""
-        from .slicing import check_grid_overlaps
-        return check_grid_overlaps(self, grid_result, universe_depth)
-
-    def find_surface_label_positions(self, grid_result, margin=20):
-        """Find optimal label positions for surfaces on a slice plane."""
-        from .slicing import find_surface_label_positions
-        return find_surface_label_positions(self, grid_result, margin)
 
     def plot_views(self, bounds=None, save=None, **kwargs):
         """Plot three orthogonal views (XY, XZ, YZ)."""

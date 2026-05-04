@@ -36,15 +36,15 @@ class TestSlicingFindLabelPositions:
 
     def test_returns_list(self, simple_model, bounds_xy):
         from aleathor.slicing import find_label_positions
-        grid = simple_model.find_cells_grid(z=0, bounds=bounds_xy, resolution=(50, 50))
+        grid = simple_model.slice.grid(axis="z", value=0, bounds=bounds_xy, resolution=(50, 50))
         labels = find_label_positions(simple_model, grid, min_pixels=10)
         assert isinstance(labels, list)
 
     def test_matches_method(self, simple_model, bounds_xy):
         from aleathor.slicing import find_label_positions
-        grid = simple_model.find_cells_grid(z=0, bounds=bounds_xy, resolution=(50, 50))
+        grid = simple_model.slice.grid(axis="z", value=0, bounds=bounds_xy, resolution=(50, 50))
         r1 = find_label_positions(simple_model, grid, min_pixels=10)
-        r2 = simple_model.find_label_positions(grid, min_pixels=10)
+        r2 = simple_model.slice.labels(grid, min_pixels=10)
         # Compare deterministic fields (pixel positions may vary between calls)
         ids1 = sorted(d['id'] for d in r1)
         ids2 = sorted(d['id'] for d in r2)
@@ -55,7 +55,7 @@ class TestSlicingFindLabelPositions:
 
     def test_by_material(self, simple_model, bounds_xy):
         from aleathor.slicing import find_label_positions
-        grid = simple_model.find_cells_grid(z=0, bounds=bounds_xy, resolution=(50, 50))
+        grid = simple_model.slice.grid(axis="z", value=0, bounds=bounds_xy, resolution=(50, 50))
         labels = find_label_positions(simple_model, grid, by_material=True)
         assert isinstance(labels, list)
 
@@ -65,15 +65,15 @@ class TestSlicingFindSurfaceLabelPositions:
 
     def test_returns_list(self, simple_model, bounds_xy):
         from aleathor.slicing import find_surface_label_positions
-        grid = simple_model.find_cells_grid(z=0, bounds=bounds_xy, resolution=(50, 50))
+        grid = simple_model.slice.grid(axis="z", value=0, bounds=bounds_xy, resolution=(50, 50))
         labels = find_surface_label_positions(simple_model, grid)
         assert isinstance(labels, list)
 
     def test_matches_method(self, simple_model, bounds_xy):
         from aleathor.slicing import find_surface_label_positions
-        grid = simple_model.find_cells_grid(z=0, bounds=bounds_xy, resolution=(50, 50))
+        grid = simple_model.slice.grid(axis="z", value=0, bounds=bounds_xy, resolution=(50, 50))
         r1 = find_surface_label_positions(simple_model, grid, margin=20)
-        r2 = simple_model.find_surface_label_positions(grid, margin=20)
+        r2 = simple_model.slice.surface_labels(grid, margin=20)
         assert r1 == r2
 
 
@@ -82,7 +82,7 @@ class TestSlicingCheckGridOverlaps:
 
     def test_returns_list(self, simple_model, bounds_xy):
         from aleathor.slicing import check_grid_overlaps
-        grid = simple_model.find_cells_grid(z=0, bounds=bounds_xy, resolution=(10, 10),
+        grid = simple_model.slice.grid(axis="z", value=0, bounds=bounds_xy, resolution=(10, 10),
                                                detect_errors=True)
         errors = check_grid_overlaps(simple_model, grid)
         assert isinstance(errors, list)
@@ -90,10 +90,10 @@ class TestSlicingCheckGridOverlaps:
 
     def test_matches_method(self, simple_model, bounds_xy):
         from aleathor.slicing import check_grid_overlaps
-        grid = simple_model.find_cells_grid(z=0, bounds=bounds_xy, resolution=(10, 10),
+        grid = simple_model.slice.grid(axis="z", value=0, bounds=bounds_xy, resolution=(10, 10),
                                                detect_errors=True)
         r1 = check_grid_overlaps(simple_model, grid)
-        r2 = simple_model.check_grid_overlaps(grid)
+        r2 = simple_model.slice.check_overlaps(grid)
         assert r1 == r2
 
 
@@ -102,7 +102,7 @@ class TestExtractSliceParams:
 
     def test_z_grid(self, simple_model, bounds_xy):
         from aleathor.slicing import _extract_slice_params
-        grid = simple_model.find_cells_grid(z=0, bounds=bounds_xy, resolution=(10, 15))
+        grid = simple_model.slice.grid(axis="z", value=0, bounds=bounds_xy, resolution=(10, 15))
         nu, nv, origin, normal, up, u_min, u_max, v_min, v_max = _extract_slice_params(grid)
         assert nu == 10
         assert nv == 15
@@ -111,7 +111,7 @@ class TestExtractSliceParams:
     def test_y_grid(self, simple_model):
         from aleathor.slicing import _extract_slice_params
         bounds = (-10, 10, -10, 10)
-        grid = simple_model.find_cells_grid(y=0, bounds=bounds, resolution=(12, 8))
+        grid = simple_model.slice.grid(axis="y", value=0, bounds=bounds, resolution=(12, 8))
         nu, nv, origin, normal, up, u_min, u_max, v_min, v_max = _extract_slice_params(grid)
         assert nu == 12
         assert nv == 8
@@ -120,7 +120,7 @@ class TestExtractSliceParams:
     def test_x_grid(self, simple_model):
         from aleathor.slicing import _extract_slice_params
         bounds = (-10, 10, -10, 10)
-        grid = simple_model.find_cells_grid(x=0, bounds=bounds, resolution=(7, 9))
+        grid = simple_model.slice.grid(axis="x", value=0, bounds=bounds, resolution=(7, 9))
         nu, nv, origin, normal, up, u_min, u_max, v_min, v_max = _extract_slice_params(grid)
         assert nu == 7
         assert nv == 9
@@ -132,8 +132,7 @@ class TestExtractSliceParams:
         normal = (1, 0, 0)
         up = (0, 0, 1)
         bounds = (-10, 10, -10, 10)
-        grid = simple_model.find_cells_grid(origin, normal, up, bounds,
-                                             resolution=(11, 13))
+        grid = simple_model.slice.grid(origin=origin, normal=normal, up=up, bounds=bounds, resolution=(11, 13))
         nu, nv = _extract_slice_params(grid)[:2]
         assert nu == 11
         assert nv == 13

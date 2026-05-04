@@ -110,12 +110,14 @@ class Cell:
     @property
     def fill(self) -> Optional[int]:
         """Universe ID filling this cell, or None."""
-        fill = self._get_info().get('fill_universe', -1)
-        return fill if fill >= 0 else None
+        fill = self._get_info().get('fill_universe', 0)
+        return fill if fill > 0 else None
 
     @fill.setter
     def fill(self, value: Optional[int]) -> None:
-        fill_id = value if value is not None else -1
+        if value is not None and value <= 0:
+            raise ValueError("fill universe must be a positive integer, or None")
+        fill_id = value if value is not None else 0
         self._model._sys.set_fill(self._index, fill_id, 0)
         self._invalidate_cache()
 
@@ -147,9 +149,9 @@ class Cell:
     def region(self) -> Any:
         """Python Region object for the cell.
 
-        For models constructed via the Python API, returns the Region
-        used to define the cell. For models loaded from file (e.g. MCNP),
-        returns None (the C backend owns the CSG node).
+        For models constructed via the Python API, returns the Region used
+        to define the cell. For models loaded from file, returns a C-backed
+        imported Region that can be printed and queried.
         """
         return self._model._regions.get(self.id)
 
@@ -271,6 +273,8 @@ class Cell:
             raise TypeError(
                 f"Expected Universe or int, got {type(universe).__name__}"
             )
+        if fill_id <= 0:
+            raise ValueError("fill universe must be a positive integer")
 
         self._model._sys.set_fill(self._index, fill_id, transform)
         self._invalidate_cache()
@@ -317,8 +321,8 @@ class Cell:
 
         fields.append(f"universe={info['universe_id']}")
 
-        fill = info.get('fill_universe', -1)
-        if fill >= 0:
+        fill = info.get('fill_universe', 0)
+        if fill > 0:
             fields.append(f"fill={fill}")
 
         lat_type = info.get('lat_type', 0)
@@ -474,6 +478,8 @@ class CellCollection:
             New CellCollection with matching cells
         """
         self._model._ensure_sys()
+        if fill_universe is not None and fill_universe <= 0:
+            raise ValueError("fill universe must be a positive integer")
 
         if fill_universe is not None and self._indices is None:
             # Use C API filter
@@ -484,9 +490,9 @@ class CellCollection:
         filtered = []
         for idx in self._get_indices():
             info = self._model._sys.get_cell_by_index(idx)
-            fill = info.get('fill_universe', -1)
+            fill = info.get('fill_universe', 0)
             if fill_universe is None:
-                if fill >= 0:
+                if fill > 0:
                     filtered.append(idx)
             else:
                 if fill == fill_universe:
