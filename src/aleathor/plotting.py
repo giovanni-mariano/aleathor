@@ -50,6 +50,21 @@ def _is_inline_backend() -> bool:
     return 'inline' in backend or 'nbagg' in backend or 'ipympl' in backend
 
 
+def _material_palette(n: int):
+    """Return ``n`` distinct colors for material legends.
+
+    Uses tab10/tab20 for small counts (categorical, easy to tell apart),
+    and falls back to a sampled continuous colormap when there are more
+    materials than discrete palette slots.
+    """
+    if n <= 10:
+        return list(plt.cm.tab10.colors)
+    if n <= 20:
+        return list(plt.cm.tab20.colors)
+    cmap = plt.cm.gist_ncar
+    return [cmap(i / max(n - 1, 1)) for i in range(n)]
+
+
 def plot_ray_path(trace,
                   ax: Optional['Axes'] = None,
                   show_materials: bool = True,
@@ -84,8 +99,10 @@ def plot_ray_path(trace,
     else:
         segments = trace
 
-    # Color map for materials
-    colors = plt.cm.tab10.colors
+    # Color map for materials — adapt palette size to material count
+    mat_ids = sorted({s['material_id'] for s in segments if s['cell_id'] >= 0})
+    colors = _material_palette(len(mat_ids))
+    color_for_mat = {mid: colors[i] for i, mid in enumerate(mat_ids)}
 
     # Build TraceSegment list once for name lookups
     trace_segments = None
@@ -102,10 +119,12 @@ def plot_ray_path(trace,
         mat_id = seg['material_id']
 
         # Clip infinite segments
-        if t_max and t_exit > t_max:
+        if t_max is not None and t_exit > t_max:
             t_exit = t_max
         if t_exit > 1e30:
-            continue  # Skip infinite void at end
+            continue  # Skip infinite void at end (no t_max provided)
+        if t_max is not None and t_enter >= t_max:
+            continue  # Segment starts past the requested window
 
         width = t_exit - t_enter
 
@@ -114,7 +133,7 @@ def plot_ray_path(trace,
             legend_label = 'void'
             legend_key = 'void'
         else:
-            color = colors[mat_id % len(colors)]
+            color = color_for_mat[mat_id]
             legend_label = f'mat {mat_id}'
             legend_key = mat_id
 

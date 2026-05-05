@@ -14,7 +14,9 @@ from .model import Model
 from .geometry import Region, Halfspace, Intersection, Union as UnionRegion, Complement
 from .surfaces import (
     Surface, Plane, XPlane, YPlane, ZPlane, Sphere,
-    XCylinder, YCylinder, ZCylinder, RPP, RCC
+    XCylinder, YCylinder, ZCylinder, XCone, YCone, ZCone,
+    XTorus, YTorus, ZTorus, RPP, Quadric,
+    RCC, Box, TRC, ELL, REC, WED, RHP,
 )
 
 try:
@@ -127,15 +129,79 @@ def read_openmc_string(content: str) -> Model:
     return model
 
 
+# Map ALEA_PRIMITIVE_* enum values (alea_types.h) to constructors that
+# rebuild a Python Surface from the dict returned by node_primitive_data.
+# Note: libalea's Plane stores ax+by+cz+d=0; aleathor's Plane uses
+# ax+by+cz=d, so d is negated on the round-trip.
+_PRIMITIVE_BUILDERS = {
+    1:  lambda d, sid: Plane(d['a'], d['b'], d['c'], -d['d'], surface_id=sid),
+    2:  lambda d, sid: Sphere(d['center_x'], d['center_y'], d['center_z'], d['radius'], surface_id=sid),
+    3:  lambda d, sid: XCylinder(d['center_y'], d['center_z'], d['radius'], surface_id=sid),
+    4:  lambda d, sid: YCylinder(d['center_x'], d['center_z'], d['radius'], surface_id=sid),
+    5:  lambda d, sid: ZCylinder(d['center_x'], d['center_y'], d['radius'], surface_id=sid),
+    6:  lambda d, sid: XCone(d['apex_x'], d['apex_y'], d['apex_z'], d['tan_angle_sq'], surface_id=sid),
+    7:  lambda d, sid: YCone(d['apex_x'], d['apex_y'], d['apex_z'], d['tan_angle_sq'], surface_id=sid),
+    8:  lambda d, sid: ZCone(d['apex_x'], d['apex_y'], d['apex_z'], d['tan_angle_sq'], surface_id=sid),
+    9:  lambda d, sid: RPP(d['min_x'], d['max_x'], d['min_y'], d['max_y'],
+                            d['min_z'], d['max_z'], surface_id=sid),
+    10: lambda d, sid: Quadric(*d['coeffs'], surface_id=sid),
+    11: lambda d, sid: XTorus(d['center_x'], d['center_y'], d['center_z'],
+                               d['major_radius'], d['minor_radius'], surface_id=sid),
+    12: lambda d, sid: YTorus(d['center_x'], d['center_y'], d['center_z'],
+                               d['major_radius'], d['minor_radius'], surface_id=sid),
+    13: lambda d, sid: ZTorus(d['center_x'], d['center_y'], d['center_z'],
+                               d['major_radius'], d['minor_radius'], surface_id=sid),
+    14: lambda d, sid: RCC(d['base_x'], d['base_y'], d['base_z'],
+                            d['height_x'], d['height_y'], d['height_z'],
+                            d['radius'], surface_id=sid),
+    15: lambda d, sid: Box(d['corner_x'], d['corner_y'], d['corner_z'],
+                            d['v1_x'], d['v1_y'], d['v1_z'],
+                            d['v2_x'], d['v2_y'], d['v2_z'],
+                            d['v3_x'], d['v3_y'], d['v3_z'], surface_id=sid),
+    17: lambda d, sid: TRC(d['base_x'], d['base_y'], d['base_z'],
+                            d['height_x'], d['height_y'], d['height_z'],
+                            d['base_radius'], d['top_radius'], surface_id=sid),
+    18: lambda d, sid: ELL(d['v1_x'], d['v1_y'], d['v1_z'],
+                            d['v2_x'], d['v2_y'], d['v2_z'],
+                            d['major_axis_len'], surface_id=sid),
+    19: lambda d, sid: REC(d['base_x'], d['base_y'], d['base_z'],
+                            d['height_x'], d['height_y'], d['height_z'],
+                            d['axis1_x'], d['axis1_y'], d['axis1_z'],
+                            d['axis2_x'], d['axis2_y'], d['axis2_z'], surface_id=sid),
+    20: lambda d, sid: WED(d['vertex_x'], d['vertex_y'], d['vertex_z'],
+                            d['v1_x'], d['v1_y'], d['v1_z'],
+                            d['v2_x'], d['v2_y'], d['v2_z'],
+                            d['v3_x'], d['v3_y'], d['v3_z'], surface_id=sid),
+}
+
+
+def _build_surface_from_node(sys, surface_id: int) -> Optional[Surface]:
+    """Reconstruct a Python Surface object from the C system by surface ID."""
+    node_id = sys.surface_node(surface_id, 1)
+    if node_id is None:
+        node_id = sys.surface_node(surface_id, -1)
+    if node_id is None:
+        return None
+    data = sys.node_primitive_data(node_id)
+    builder = _PRIMITIVE_BUILDERS.get(data.get('type'))
+    if builder is None:
+        return None
+    return builder(data, surface_id)
+
+
 def _populate_regions(model: Model, sys) -> None:
-    """Extract region metadata from C system into model side-dicts."""
+    """Attach region wrappers from the C system into the model.
+
+    Surfaces are NOT materialized here: doing so would force every cell's
+    CSG tree through `node_tree()` and `_unpack_csg_tree`, which dominates
+    load time for large MCNP files. `Model.surfaces` lazily reconstructs
+    the dict on first access.
+    """
     sys.build_universe_index()
     for cell_info in sys.get_cells():
         cell_id = cell_info['cell_id']
         region = _ImportedRegion(sys, cell_info['root_node'])
         model._regions[cell_id] = region
-        for surface in region.get_surfaces():
-            model._surfaces[surface.id] = surface
 
 
 def write_mcnp(model: Model, filename: Union[str, Path]) -> None:

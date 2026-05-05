@@ -1095,7 +1095,17 @@ class Model:
         """Get all surfaces by ID.
 
         Returns a dictionary mapping surface IDs to Surface objects.
+        For models loaded from MCNP/OpenMC, surfaces are reconstructed
+        lazily from the C system on first access — the cell trees are
+        walked once to collect the set of surface IDs, then each Surface
+        is rebuilt from `node_primitive_data`.
         """
+        if not self._surfaces and self._sys is not None and self._sys.surface_count > 0:
+            from .io import _build_surface_from_node
+            for sid in self._sys.get_surface_ids():
+                surf = _build_surface_from_node(self._sys, sid)
+                if surf is not None:
+                    self._surfaces[sid] = surf
         return dict(self._surfaces)
 
     @property

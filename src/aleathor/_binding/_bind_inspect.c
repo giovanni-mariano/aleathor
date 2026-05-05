@@ -220,6 +220,38 @@ static PyObject* AleaTHORSystem_surface_node(AleaTHORSystemObject* self, PyObjec
     return PyLong_FromUnsignedLong(sense > 0 ? pos_node : neg_node);
 }
 
+static PyObject* AleaTHORSystem_surface_id_at(AleaTHORSystemObject* self, PyObject* args) {
+    Py_ssize_t idx;
+    if (!PyArg_ParseTuple(args, "n", &idx)) return NULL;
+    if (!self->sys) { PyErr_SetString(PyExc_RuntimeError, "System not initialized"); return NULL; }
+
+    int sid = alea_surface_id_at(self->sys, (size_t)idx);
+    if (sid < 0) {
+        PyErr_Format(PyExc_IndexError, "Surface index %zd out of range", idx);
+        return NULL;
+    }
+    return PyLong_FromLong(sid);
+}
+
+static PyObject* AleaTHORSystem_get_surface_ids(AleaTHORSystemObject* self, PyObject* Py_UNUSED(ignored)) {
+    if (!self->sys) { PyErr_SetString(PyExc_RuntimeError, "System not initialized"); return NULL; }
+
+    size_t count = alea_surface_count(self->sys);
+    if (count == 0) return PyList_New(0);
+
+    int* buf = (int*)PyMem_Malloc(count * sizeof(int));
+    if (!buf) return PyErr_NoMemory();
+
+    size_t n = alea_get_surface_ids(self->sys, buf);
+    PyObject* list = PyList_New((Py_ssize_t)n);
+    if (!list) { PyMem_Free(buf); return NULL; }
+    for (size_t i = 0; i < n; i++) {
+        PyList_SET_ITEM(list, (Py_ssize_t)i, PyLong_FromLong(buf[i]));
+    }
+    PyMem_Free(buf);
+    return list;
+}
+
 static PyObject* AleaTHORSystem_cells_in_universe(AleaTHORSystemObject* self, PyObject* args) {
     int universe_id;
     if (!PyArg_ParseTuple(args, "i", &universe_id)) return NULL;

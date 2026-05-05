@@ -28,7 +28,7 @@ Example:
     model.export_serpent("geometry.serp")
 """
 
-__version__ = "0.1.0"
+__version__ = "0.1.0a4"
 
 from .geometry import (
     Region,

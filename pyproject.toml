@@ -1,6 +1,6 @@
 [project]
 name = "aleathor"
-version = "0.1.0a3"
+version = "0.1.0a4"
 description = "Python library for debugging Constructive Solid Geometry (CSG) models for MCNP and OpenMC"
 readme = "README.md"
 license = "MPL-2.0"

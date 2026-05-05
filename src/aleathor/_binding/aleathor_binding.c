@@ -635,6 +635,10 @@ static PyMethodDef AleaTHORSystem_methods[] = {
      "surface_find(surface_id) -> int or None\n\nFind surface index by MCNP surface ID."},
     {"surface_node", (PyCFunction)AleaTHORSystem_surface_node, METH_VARARGS,
      "surface_node(surface_id, sense) -> node_id or None\n\nGet node by surface ID and sense (-1 or +1)."},
+    {"surface_id_at", (PyCFunction)AleaTHORSystem_surface_id_at, METH_VARARGS,
+     "surface_id_at(idx) -> int\n\nGet the surface ID at storage index `idx` in [0, surface_count)."},
+    {"get_surface_ids", (PyCFunction)AleaTHORSystem_get_surface_ids, METH_NOARGS,
+     "get_surface_ids() -> list[int]\n\nReturn all surface IDs in storage order — single C call, no tree walk."},
 
     /* CSG Node Inspection (individual) */
     {"node_operation", (PyCFunction)AleaTHORSystem_node_operation, METH_VARARGS,
