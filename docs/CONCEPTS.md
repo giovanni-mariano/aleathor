@@ -23,10 +23,10 @@ In aleathor, a surface is always one of these types:
 | `ZCylinder` | (x-x0)^2 + (y-y0)^2 = r^2 | CZ, C/Z |
 | `XCone/Y/Z` | ... = t^2 * (axis)^2 | KX, KY, KZ |
 | `XTorus/Y/Z` | fourth-degree surface of revolution | TX, TY, TZ |
-| `Box` | axis-aligned box | RPP |
+| `RPP` | axis-aligned box | RPP |
 | `Quadric` | Ax^2 + By^2 + ... + K = 0 | GQ, SQ |
 
-Macrobodies (`RCC`, `TRC`, `ELL`, `REC`, `WED`, `RHP`, `GeneralBox`) are also surface types. They represent composite shapes (a cylinder-with-caps, a wedge, etc.) as single objects.
+Macrobodies (`RPP`, `RCC`, `TRC`, `ELL`, `REC`, `WED`, `RHP`, `Box`) are also surface types. They represent composite shapes (a cylinder-with-caps, a wedge, etc.) as single objects.
 
 Surface IDs are auto-assigned when you create a surface. If you load from MCNP, the original surface IDs are preserved.
 
@@ -73,7 +73,7 @@ aleathor uses Python operators for boolean combinations:
 
 ```python
 sphere = ath.Sphere(0, 0, 0, radius=5.0)
-box = ath.Box(-10, 10, -10, 10, -10, 10)
+box = ath.RPP(-10, 10, -10, 10, -10, 10)
 
 # Hemisphere: inside sphere AND above z=0
 plane = ath.ZPlane(0)
@@ -284,13 +284,13 @@ Macrobodies are composite surfaces that MCNP defines as single surface cards but
 | Macrobody | Description | Decomposition |
 |-----------|-------------|---------------|
 | `RCC` | Right circular cylinder | Cylinder + 2 planes |
-| `Box` / RPP | Axis-aligned box | 6 planes (or single primitive) |
+| `RPP` | Axis-aligned box | 6 planes (or single primitive) |
 | `TRC` | Truncated right cone | Cone + 2 planes |
 | `ELL` | Ellipsoid | Quadric surface |
 | `REC` | Right elliptical cylinder | Quadric + 2 planes |
 | `WED` | Wedge | 5 planes |
 | `RHP` / HEX | Hexagonal prism | 8 planes |
-| `GeneralBox` | Oriented box | 6 planes |
+| `Box` | Oriented box | 6 planes |
 
 You can expand macrobodies to their primitive surfaces:
 

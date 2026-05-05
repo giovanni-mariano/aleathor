@@ -14,7 +14,7 @@ Example:
     # Create geometry
     fuel = ath.Sphere(0, 0, 0, radius=5.0).interior()
     clad = ath.ZCylinder(0, 0, radius=5.5).interior() - fuel
-    water = ath.Box(-10, 10, -10, 10, -10, 10).interior() - fuel - clad
+    water = ath.RPP(-10, 10, -10, 10, -10, 10).interior() - fuel - clad
 
     # Create model
     model = ath.Model()
@@ -54,14 +54,14 @@ from .surfaces import (
     XTorus,
     YTorus,
     ZTorus,
-    Box,
+    RPP,
     RCC,
     TRC,
     ELL,
     REC,
     WED,
     RHP,
-    GeneralBox,
+    Box,
     Quadric,
 )
 
@@ -208,14 +208,14 @@ __all__ = [
     'XTorus',
     'YTorus',
     'ZTorus',
-    'Box',
+    'RPP',
     'RCC',
     'TRC',
     'ELL',
     'REC',
     'WED',
     'RHP',
-    'GeneralBox',
+    'Box',
     'Quadric',
     # Model
     'Model',

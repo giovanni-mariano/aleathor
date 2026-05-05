@@ -28,7 +28,7 @@ def simple_model():
     sphere = ath.Sphere(0, 0, 0, radius=5.0)
 
     # Outer box (moderator)
-    box = ath.Box(-10, 10, -10, 10, -10, 10)
+    box = ath.RPP(-10, 10, -10, 10, -10, 10)
 
     # Add cells
     model.add_cell(
@@ -58,7 +58,7 @@ def multi_cell_model():
     s1 = ath.Sphere(0, 0, 0, radius=2.0)
     s2 = ath.Sphere(0, 0, 0, radius=4.0)
     s3 = ath.Sphere(0, 0, 0, radius=6.0)
-    box = ath.Box(-10, 10, -10, 10, -10, 10)
+    box = ath.RPP(-10, 10, -10, 10, -10, 10)
 
     model.add_cell(region=-s1, material=1, density=10.0, name="core")
     model.add_cell(region=-s2 & +s1, material=2, density=8.0, name="inner_shell")
@@ -76,7 +76,7 @@ def cylinder_model():
     model = ath.Model("Cylinder Model")
 
     cyl = ath.ZCylinder(0, 0, radius=3.0)
-    box = ath.Box(-10, 10, -10, 10, -5, 5)
+    box = ath.RPP(-10, 10, -10, 10, -5, 5)
 
     model.add_cell(region=-cyl & -box, material=1, density=5.0, name="cylinder")
     model.add_cell(region=-box & +cyl, material=2, density=1.0, name="exterior")

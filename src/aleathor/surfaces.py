@@ -443,13 +443,11 @@ class ZCone(Surface):
         return (self.z0, self.t_sq, self.sheet)
 
 
-class Box(Surface):
+class RPP(Surface):
     """Axis-aligned rectangular parallelepiped (RPP macrobody).
 
-    A box is defined by its extent in each dimension.
-    Unlike other surfaces, Box is a closed region.
-
-    Use box.interior() to get the inside region.
+    Defined by its extent in each dimension. Unlike other surfaces,
+    RPP is a closed region. Use rpp.interior() to get the inside region.
     """
 
     def __init__(self, xmin: float, xmax: float,
@@ -464,13 +462,13 @@ class Box(Surface):
         """
         super().__init__(name=name, **kwargs)
         if xmin >= xmax or ymin >= ymax or zmin >= zmax:
-            raise ValueError("Box min values must be less than max values")
+            raise ValueError("RPP min values must be less than max values")
         self.xmin, self.xmax = xmin, xmax
         self.ymin, self.ymax = ymin, ymax
         self.zmin, self.zmax = zmin, zmax
 
     def evaluate(self, point: Tuple[float, float, float]) -> float:
-        """For Box, negative = inside, positive = outside."""
+        """For RPP, negative = inside, positive = outside."""
         x, y, z = point
         # Distance to nearest face (negative if inside)
         dx = max(self.xmin - x, x - self.xmax, 0)
@@ -952,11 +950,11 @@ class RHP(Surface):
                 self.r3_x, self.r3_y, self.r3_z)
 
 
-class GeneralBox(Surface):
+class Box(Surface):
     """General box macrobody (arbitrarily oriented).
 
     A parallelepiped defined by a corner and three edge vectors.
-    Unlike Box (RPP), this can be arbitrarily oriented.
+    Unlike RPP, this can be arbitrarily oriented.
     """
 
     def __init__(self, corner_x: float, corner_y: float, corner_z: float,

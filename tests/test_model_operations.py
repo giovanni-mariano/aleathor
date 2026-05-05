@@ -378,7 +378,7 @@ class TestCellMutation:
 
         model = ath.Model("Fill Test")
         s = ath.Sphere(0, 0, 0, radius=5.0)
-        box = ath.Box(-10, 10, -10, 10, -10, 10)
+        box = ath.RPP(-10, 10, -10, 10, -10, 10)
         model.add_cell(region=-s, material=0, fill=5)
         model.add_cell(region=-box & +s, material=1, density=1.0)
 

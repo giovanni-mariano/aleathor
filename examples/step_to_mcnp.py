@@ -59,7 +59,7 @@ from aleathor.surfaces import (
     YTorus,
     ZTorus,
     RCC,
-    Box,
+    RPP,
 )
 
 
@@ -254,7 +254,7 @@ def _classify_solid(solid):
         s = faces[0]
         return Sphere(*s["center"], s["radius"]), "sphere"
 
-    # Box: 6 planes
+    # RPP: 6 planes
     if types == {"plane"} and len(faces) == 6:
         # Collect plane offsets per axis
         xs, ys, zs = [], [], []
@@ -267,7 +267,7 @@ def _classify_solid(solid):
             elif abs(a) < AXIS_TOL and abs(b) < AXIS_TOL and abs(abs(c) - 1) < AXIS_TOL:
                 zs.append(d * (1 if c > 0 else -1))
         if len(xs) == 2 and len(ys) == 2 and len(zs) == 2:
-            return Box(min(xs), max(xs), min(ys), max(ys), min(zs), max(zs)), "box"
+            return RPP(min(xs), max(xs), min(ys), max(ys), min(zs), max(zs)), "box"
 
     # Cylinder: 2 planes + N cylinder faces (all same radius/axis)
     planes = [f for f in faces if f["type"] == "plane"]
@@ -552,7 +552,7 @@ def main():
     print("\n" + "=" * 50)
     print("Void generation")
     print("=" * 50)
-    bounds_box = Box(*bounds)
+    bounds_box = RPP(*bounds)
     voids = model.void.generate(region=-bounds_box, max_depth=3)
     print(f"Found {len(voids)} void boxes")
     voids.merge()

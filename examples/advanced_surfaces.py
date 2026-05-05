@@ -5,7 +5,7 @@ Advanced surfaces example for aleathor CSG library.
 This example demonstrates the various surface types available:
 - Basic surfaces: Plane, Sphere, Cylinder, Cone
 - Torus surfaces
-- Macrobodies: RCC, TRC, Box
+- Macrobodies: RCC, TRC, RPP
 - General quadric surface
 """
 
@@ -19,7 +19,7 @@ from aleathor.surfaces import (
     # Torus
     XTorus, YTorus, ZTorus,
     # Macrobodies
-    Box, RCC, TRC,
+    RPP, RCC, TRC,
     # General
     Quadric,
 )
@@ -122,8 +122,8 @@ print(f"  Torus along Y (R=5, r=1): {torus_y}")
 
 print("\n--- Macrobodies ---")
 
-# Box (RPP - Rectangular Parallelepiped)
-box = Box(xmin=-5, xmax=5, ymin=-3, ymax=3, zmin=-10, zmax=10)
+# RPP (RPP - Rectangular Parallelepiped)
+box = RPP(xmin=-5, xmax=5, ymin=-3, ymax=3, zmin=-10, zmax=10)
 
 # RCC (Right Circular Cylinder)
 # Defined by base point, height vector, and radius
@@ -141,7 +141,7 @@ trc = TRC(
     base_radius=3, top_radius=1
 )
 
-print(f"  Box: {box}")
+print(f"  RPP: {box}")
 print(f"  RCC (cylinder): {rcc}")
 print(f"  TRC (truncated cone): {trc}")
 
@@ -176,7 +176,7 @@ model = ath.Model("Torus Example")
 
 # Create a torus inside a box
 torus = ZTorus(0, 0, 0, major_radius=5, minor_radius=1.5)
-outer = Box(-10, 10, -10, 10, -5, 5)
+outer = RPP(-10, 10, -10, 10, -5, 5)
 
 model.add_cell(region=-torus, material=1, density=8.0, name="torus_interior")
 model.add_cell(region=-outer & +torus, material=2, density=1.0, name="surrounding")

@@ -15,7 +15,7 @@ This example demonstrates the visualization capabilities:
 """
 
 import aleathor as ath
-from aleathor.surfaces import Sphere, ZCylinder, Box, ZTorus
+from aleathor.surfaces import Sphere, ZCylinder, RPP, ZTorus
 
 # =============================================================================
 # Create a tokamak-like geometry for visualization
@@ -38,7 +38,7 @@ vessel_inner = ZCylinder(0, 0, radius=3.5)
 vessel_outer = ZCylinder(0, 0, radius=9.0)
 
 # Outer boundary
-boundary = Box(-12, 12, -12, 12, -5, 5)
+boundary = RPP(-12, 12, -12, 12, -5, 5)
 
 # Define cells
 model.add_cell(

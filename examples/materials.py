@@ -88,7 +88,7 @@ print(f"Mixture M{water_ss_id}: 50% Water + 50% SS304")
 fuel_r  = ath.ZCylinder(0, 0, radius=0.4096)
 clad_ir = ath.ZCylinder(0, 0, radius=0.418)
 clad_or = ath.ZCylinder(0, 0, radius=0.475)
-pitch   = ath.Box(-0.63, 0.63, -0.63, 0.63, -10, 10)
+pitch   = ath.RPP(-0.63, 0.63, -0.63, 0.63, -10, 10)
 
 # Cells
 model.add_cell(region=-fuel_r, material=1, density=10.97,

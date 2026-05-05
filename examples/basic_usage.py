@@ -10,7 +10,7 @@ This example demonstrates how to:
 """
 
 import aleathor as ath
-from aleathor.surfaces import Sphere, ZCylinder, Box, Plane
+from aleathor.surfaces import Sphere, ZCylinder, RPP, Plane
 
 # =============================================================================
 # 1. Create a simple reactor pin cell geometry
@@ -33,7 +33,7 @@ gap_surf = ZCylinder(0, 0, radius=0.418)
 clad_surf = ZCylinder(0, 0, radius=0.475)
 
 # Water box (half-pitch 0.63 cm)
-water_box = Box(-0.63, 0.63, -0.63, 0.63, -1.0, 1.0)
+water_box = RPP(-0.63, 0.63, -0.63, 0.63, -1.0, 1.0)
 
 # Define cells using CSG region operators
 # -surface means "inside" (negative side)

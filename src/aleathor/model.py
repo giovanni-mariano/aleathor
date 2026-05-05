@@ -752,8 +752,8 @@ class Model:
         # Create surface using *_surface functions (returns index, pos_node, neg_node)
         from .surfaces import (
             Plane, Sphere, XCylinder, YCylinder, ZCylinder,
-            XCone, YCone, ZCone, Box, RCC,
-            XTorus, YTorus, ZTorus, Quadric, TRC, ELL, REC, WED, RHP, GeneralBox
+            XCone, YCone, ZCone, RPP, RCC,
+            XTorus, YTorus, ZTorus, Quadric, TRC, ELL, REC, WED, RHP, Box
         )
 
         if isinstance(surface, Sphere):
@@ -799,7 +799,7 @@ class Model:
                 surface.id, surface.x0, surface.y0, surface.z0,
                 surface.major_radius, surface.minor_radius
             )
-        elif isinstance(surface, Box):
+        elif isinstance(surface, RPP):
             _, pos_node, neg_node = self._sys.box_surface(
                 surface.id,
                 surface.xmin, surface.xmax,
@@ -852,7 +852,7 @@ class Model:
                 surface.r2_x, surface.r2_y, surface.r2_z,
                 surface.r3_x, surface.r3_y, surface.r3_z
             )
-        elif isinstance(surface, GeneralBox):
+        elif isinstance(surface, Box):
             _, pos_node, neg_node = self._sys.box_general_surface(
                 surface.id,
                 surface.corner_x, surface.corner_y, surface.corner_z,
@@ -1408,7 +1408,8 @@ class Model:
         """Human-readable string representation."""
         n_cells = self._sys.cell_count if self._sys else 0
         n_surfaces = self._sys.surface_count if self._sys else len(self._surfaces)
-        n_universes = len(self._universes) if self._universes else 0
+        universe_ids = set(self._universes) | {c.universe for c in self.cells}
+        n_universes = len(universe_ids) if universe_ids else 1
         return f"Model: {n_cells} cells, {n_surfaces} surfaces, {n_universes} universes"
 
     def __repr__(self) -> str:

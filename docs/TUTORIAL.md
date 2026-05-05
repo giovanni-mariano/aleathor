@@ -22,7 +22,7 @@ You can start from an existing MCNP/OpenMC file, but a small Python-built model 
 model = ath.Model("Sphere in box")
 
 sphere = ath.Sphere(0, 0, 0, radius=5.0)
-box = ath.Box(-10, 10, -10, 10, -10, 10)
+box = ath.RPP(-10, 10, -10, 10, -10, 10)
 
 fuel = -sphere
 moderator = -box & +sphere
@@ -243,7 +243,7 @@ pin = ath.Model("Pin")
 
 fuel = ath.Sphere(0, 0, 0, radius=0.4)
 clad = ath.ZCylinder(0, 0, radius=0.5)
-box = ath.Box(-1, 1, -1, 1, -1, 1)
+box = ath.RPP(-1, 1, -1, 1, -1, 1)
 
 pin.add_cell(-fuel, material=1, density=10.0, universe=1, name="fuel")
 pin.add_cell(-clad & +fuel, material=2, density=6.5, universe=1, name="clad")

@@ -14,7 +14,7 @@ from .model import Model
 from .geometry import Region, Halfspace, Intersection, Union as UnionRegion, Complement
 from .surfaces import (
     Surface, Plane, XPlane, YPlane, ZPlane, Sphere,
-    XCylinder, YCylinder, ZCylinder, Box, RCC
+    XCylinder, YCylinder, ZCylinder, RPP, RCC
 )
 
 try:

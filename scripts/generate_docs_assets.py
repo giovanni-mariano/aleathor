@@ -19,7 +19,7 @@ def build_model() -> ath.Model:
     model = ath.Model("docs example")
 
     sphere = ath.Sphere(0, 0, 0, radius=5.0)
-    box = ath.Box(-10, 10, -10, 10, -10, 10)
+    box = ath.RPP(-10, 10, -10, 10, -10, 10)
 
     model.add_cell(-sphere, material=1, density=10.5, name="fuel")
     model.add_cell(-box & +sphere, material=2, density=1.0, name="moderator")

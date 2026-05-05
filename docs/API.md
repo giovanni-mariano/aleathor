@@ -1012,14 +1012,14 @@ Quadric(A, B, C, D, E, F, G, H, J, K, ...)
 ### Macrobodies
 
 ```python
-Box(xmin, xmax, ymin, ymax, zmin, zmax, ...)
+RPP(xmin, xmax, ymin, ymax, zmin, zmax, ...)
 RCC(base_x, base_y, base_z, height_x, height_y, height_z, radius, ...)
 TRC(base_x, base_y, base_z, height_x, height_y, height_z, base_radius, top_radius, ...)
 ELL(v1_x, v1_y, v1_z, v2_x, v2_y, v2_z, major_axis_len, ...)
 REC(base_x, ..., height_x, ..., axis1_x, ..., axis2_x, ..., ...)
 WED(vertex_x, ..., v1_x, ..., v2_x, ..., v3_x, ..., ...)
 RHP(base_x, ..., height_x, ..., r1_x, ..., r2_x, ..., r3_x, ..., ...)
-GeneralBox(corner_x, ..., v1_x, ..., v2_x, ..., v3_x, ..., ...)
+Box(corner_x, ..., v1_x, ..., v2_x, ..., v3_x, ..., ...)
 ```
 
 ---
