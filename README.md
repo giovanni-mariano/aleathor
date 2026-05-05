@@ -1,7 +1,7 @@
 # aleathor
 
 <p align="center">
-  <img src="assets/aleathor_logo.png" alt="aleathor Logo" width="400">
+  <img src="https://raw.githubusercontent.com/giovanni-mariano/aleathor/main/assets/aleathor_logo.png" alt="aleathor Logo" width="400">
 </p>
 
 aleathor is a Python package for inspecting, debugging, and converting CSG
