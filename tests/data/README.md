@@ -66,7 +66,7 @@ This directory contains MCNP input files for testing the aleathor library.
 import aleathor as ath
 
 # Load any test file
-model = ath.load_mcnp("tests/data/concentric_spheres.inp")
+model = ath.read_mcnp("tests/data/concentric_spheres.inp")
 
 # Plot
 model.plot(z=0, bounds=(-12, 12, -12, 12))

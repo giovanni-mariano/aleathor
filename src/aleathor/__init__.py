@@ -28,7 +28,7 @@ Example:
     model.export_serpent("geometry.serp")
 """
 
-__version__ = "0.1.0a4"
+__version__ = "0.1.0a5"
 
 from .geometry import (
     Region,
@@ -97,11 +97,6 @@ from .nucdata import (
     parse_zaid,
     reaction_classify,
 )
-
-# Design document API aliases
-load_mcnp = read_mcnp
-load_openmc = read_openmc
-
 
 def load(filename: str) -> Model:
     """Load a geometry file, auto-detecting format.
@@ -224,8 +219,6 @@ __all__ = [
     'Universe',
     # I/O
     'load',
-    'load_mcnp',
-    'load_openmc',
     'read_mcnp',
     'read_mcnp_string',
     'read_openmc',
