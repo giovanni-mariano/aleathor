@@ -17,7 +17,7 @@ src/aleathor/
     __init__.py        Public API surface, optional imports
     model.py           Model, Material, Universe, and C-backed model operations
     collections.py     Cell, CellCollection, TraceResult, TraceSegment
-    surfaces.py        Surface classes (Sphere, Box, CylinderZ, etc.)
+    surfaces.py        Surface classes (Sphere, Box, ZCylinder, etc.)
     geometry.py        Region classes (Halfspace, Intersection, Union, Complement)
     io.py              File I/O (read_mcnp, write_openmc, etc.)
     slicing.py         DRY helper for slice parameter extraction
@@ -106,7 +106,7 @@ def _get_or_create_halfspace_node(self, surface, positive):
 
     if isinstance(surface, Sphere):
         _, pos_node, neg_node = self._sys.sphere_surface(...)
-    elif isinstance(surface, CylinderZ):
+    elif isinstance(surface, ZCylinder):
         _, pos_node, neg_node = self._sys.cylinder_z_surface(...)
     # ... etc for all ~20 surface types
 ```
@@ -245,7 +245,7 @@ __init__.py  ─── re-exports public API
     ├── model.py ────── Model, Cell, Material, Universe
     │     │
     │     ├── geometry.py ──── Region, Halfspace, Intersection, Union, Complement
-    │     ├── surfaces.py ──── Surface, Sphere, Box, CylinderZ, ...
+    │     ├── surfaces.py ──── Surface, Sphere, Box, ZCylinder, ...
     │     ├── collections.py ── Cell, CellCollection, TraceResult, TraceSegment
     │     └── slicing.py ───── _extract_slice_params, find_label_positions, ...
     │

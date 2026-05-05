@@ -75,7 +75,7 @@ def cylinder_model():
 
     model = ath.Model("Cylinder Model")
 
-    cyl = ath.CylinderZ(0, 0, radius=3.0)
+    cyl = ath.ZCylinder(0, 0, radius=3.0)
     box = ath.Box(-10, 10, -10, 10, -5, 5)
 
     model.add_cell(region=-cyl & -box, material=1, density=5.0, name="cylinder")

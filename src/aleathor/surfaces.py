@@ -272,7 +272,7 @@ class Sphere(Surface):
         return (self.x0, self.y0, self.z0, self.radius)
 
 
-class CylinderX(Surface):
+class XCylinder(Surface):
     """Infinite cylinder along X axis: (y-y0)² + (z-z0)² = R²"""
 
     def __init__(self, y0: float, z0: float, radius: float,
@@ -305,7 +305,7 @@ class CylinderX(Surface):
         return (self.y0, self.z0, self.radius)
 
 
-class CylinderY(Surface):
+class YCylinder(Surface):
     """Infinite cylinder along Y axis: (x-x0)² + (z-z0)² = R²"""
 
     def __init__(self, x0: float, z0: float, radius: float,
@@ -338,7 +338,7 @@ class CylinderY(Surface):
         return (self.x0, self.z0, self.radius)
 
 
-class CylinderZ(Surface):
+class ZCylinder(Surface):
     """Infinite cylinder along Z axis: (x-x0)² + (y-y0)² = R²"""
 
     def __init__(self, x0: float, y0: float, radius: float,
@@ -371,7 +371,7 @@ class CylinderZ(Surface):
         return (self.x0, self.y0, self.radius)
 
 
-class ConeX(Surface):
+class XCone(Surface):
     """Cone along X axis: (y-y0)²/t² + (z-z0)²/t² = (x-x0)²"""
 
     def __init__(self, x0: float, y0: float, z0: float, t_sq: float,
@@ -399,7 +399,7 @@ class ConeX(Surface):
         return (self.x0, self.t_sq, self.sheet)
 
 
-class ConeY(Surface):
+class YCone(Surface):
     """Cone along Y axis."""
 
     def __init__(self, x0: float, y0: float, z0: float, t_sq: float,
@@ -421,7 +421,7 @@ class ConeY(Surface):
         return (self.y0, self.t_sq, self.sheet)
 
 
-class ConeZ(Surface):
+class ZCone(Surface):
     """Cone along Z axis."""
 
     def __init__(self, x0: float, y0: float, z0: float, t_sq: float,
@@ -574,7 +574,7 @@ class RCC(Surface):
                 self.radius)
 
 
-class TorusZ(Surface):
+class ZTorus(Surface):
     """Torus with axis along Z: ((√(x²+y²) - R)² + z²) = r²
 
     A torus (donut shape) centered at a point with major radius R
@@ -610,7 +610,7 @@ class TorusZ(Surface):
         return (self.x0, self.y0, self.z0, self.major_radius, self.minor_radius)
 
 
-class TorusX(Surface):
+class XTorus(Surface):
     """Torus with axis along X."""
 
     def __init__(self, x0: float, y0: float, z0: float,
@@ -636,7 +636,7 @@ class TorusX(Surface):
         return (self.x0, self.y0, self.z0, self.major_radius, self.minor_radius)
 
 
-class TorusY(Surface):
+class YTorus(Surface):
     """Torus with axis along Y."""
 
     def __init__(self, x0: float, y0: float, z0: float,

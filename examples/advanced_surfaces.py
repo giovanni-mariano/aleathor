@@ -14,10 +14,10 @@ from aleathor.surfaces import (
     # Basic surfaces
     Plane, XPlane, YPlane, ZPlane,
     Sphere,
-    CylinderX, CylinderY, CylinderZ,
-    ConeX, ConeY, ConeZ,
+    XCylinder, YCylinder, ZCylinder,
+    XCone, YCone, ZCone,
     # Torus
-    TorusX, TorusY, TorusZ,
+    XTorus, YTorus, ZTorus,
     # Macrobodies
     Box, RCC, TRC,
     # General
@@ -71,12 +71,12 @@ print(f"  Sphere at (10,5,3), r=2.5: {s2}")
 print("\n--- Cylinders ---")
 
 # Cylinders along each axis
-cyl_x = CylinderX(y0=0, z0=0, radius=3)  # Along X axis
-cyl_y = CylinderY(x0=0, z0=0, radius=3)  # Along Y axis
-cyl_z = CylinderZ(x0=0, y0=0, radius=3)  # Along Z axis
+cyl_x = XCylinder(y0=0, z0=0, radius=3)  # Along X axis
+cyl_y = YCylinder(x0=0, z0=0, radius=3)  # Along Y axis
+cyl_z = ZCylinder(x0=0, y0=0, radius=3)  # Along Z axis
 
 # Off-center cylinder
-cyl_off = CylinderZ(x0=5, y0=5, radius=2)
+cyl_off = ZCylinder(x0=5, y0=5, radius=2)
 
 print(f"  Cylinder along X: {cyl_x}")
 print(f"  Cylinder along Y: {cyl_y}")
@@ -91,9 +91,9 @@ print("\n--- Cones ---")
 
 # Cones along each axis
 # t_sq is tan²(half-angle)
-cone_x = ConeX(x0=0, y0=0, z0=0, t_sq=0.25)  # 26.57° half-angle
-cone_y = ConeY(x0=0, y0=0, z0=0, t_sq=0.25)
-cone_z = ConeZ(x0=0, y0=0, z0=0, t_sq=1.0)   # 45° half-angle
+cone_x = XCone(x0=0, y0=0, z0=0, t_sq=0.25)  # 26.57° half-angle
+cone_y = YCone(x0=0, y0=0, z0=0, t_sq=0.25)
+cone_z = ZCone(x0=0, y0=0, z0=0, t_sq=1.0)   # 45° half-angle
 
 print(f"  Cone along X (26.57° half-angle): {cone_x}")
 print(f"  Cone along Y (26.57° half-angle): {cone_y}")
@@ -108,9 +108,9 @@ print("\n--- Torus ---")
 # Torus (donut shape) along each axis
 # major_radius = distance from center to tube center
 # minor_radius = radius of the tube
-torus_z = TorusZ(0, 0, 0, major_radius=5, minor_radius=1)
-torus_x = TorusX(0, 0, 0, major_radius=5, minor_radius=1)
-torus_y = TorusY(0, 0, 0, major_radius=5, minor_radius=1)
+torus_z = ZTorus(0, 0, 0, major_radius=5, minor_radius=1)
+torus_x = XTorus(0, 0, 0, major_radius=5, minor_radius=1)
+torus_y = YTorus(0, 0, 0, major_radius=5, minor_radius=1)
 
 print(f"  Torus along Z (R=5, r=1): {torus_z}")
 print(f"  Torus along X (R=5, r=1): {torus_x}")
@@ -175,7 +175,7 @@ print("=" * 60)
 model = ath.Model("Torus Example")
 
 # Create a torus inside a box
-torus = TorusZ(0, 0, 0, major_radius=5, minor_radius=1.5)
+torus = ZTorus(0, 0, 0, major_radius=5, minor_radius=1.5)
 outer = Box(-10, 10, -10, 10, -5, 5)
 
 model.add_cell(region=-torus, material=1, density=8.0, name="torus_interior")

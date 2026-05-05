@@ -751,50 +751,50 @@ class Model:
 
         # Create surface using *_surface functions (returns index, pos_node, neg_node)
         from .surfaces import (
-            Plane, Sphere, CylinderX, CylinderY, CylinderZ,
-            ConeX, ConeY, ConeZ, Box, RCC,
-            TorusX, TorusY, TorusZ, Quadric, TRC, ELL, REC, WED, RHP, GeneralBox
+            Plane, Sphere, XCylinder, YCylinder, ZCylinder,
+            XCone, YCone, ZCone, Box, RCC,
+            XTorus, YTorus, ZTorus, Quadric, TRC, ELL, REC, WED, RHP, GeneralBox
         )
 
         if isinstance(surface, Sphere):
             _, pos_node, neg_node = self._sys.sphere_surface(
                 surface.id, surface.x0, surface.y0, surface.z0, surface.radius
             )
-        elif isinstance(surface, CylinderZ):
+        elif isinstance(surface, ZCylinder):
             _, pos_node, neg_node = self._sys.cylinder_z_surface(
                 surface.id, surface.x0, surface.y0, surface.radius
             )
-        elif isinstance(surface, CylinderX):
+        elif isinstance(surface, XCylinder):
             _, pos_node, neg_node = self._sys.cylinder_x_surface(
                 surface.id, surface.y0, surface.z0, surface.radius
             )
-        elif isinstance(surface, CylinderY):
+        elif isinstance(surface, YCylinder):
             _, pos_node, neg_node = self._sys.cylinder_y_surface(
                 surface.id, surface.x0, surface.z0, surface.radius
             )
-        elif isinstance(surface, ConeZ):
+        elif isinstance(surface, ZCone):
             _, pos_node, neg_node = self._sys.cone_z_surface(
                 surface.id, surface.x0, surface.y0, surface.z0, surface.t_sq
             )
-        elif isinstance(surface, ConeX):
+        elif isinstance(surface, XCone):
             _, pos_node, neg_node = self._sys.cone_x_surface(
                 surface.id, surface.x0, surface.y0, surface.z0, surface.t_sq
             )
-        elif isinstance(surface, ConeY):
+        elif isinstance(surface, YCone):
             _, pos_node, neg_node = self._sys.cone_y_surface(
                 surface.id, surface.x0, surface.y0, surface.z0, surface.t_sq
             )
-        elif isinstance(surface, TorusZ):
+        elif isinstance(surface, ZTorus):
             _, pos_node, neg_node = self._sys.torus_z_surface(
                 surface.id, surface.x0, surface.y0, surface.z0,
                 surface.major_radius, surface.minor_radius
             )
-        elif isinstance(surface, TorusX):
+        elif isinstance(surface, XTorus):
             _, pos_node, neg_node = self._sys.torus_x_surface(
                 surface.id, surface.x0, surface.y0, surface.z0,
                 surface.major_radius, surface.minor_radius
             )
-        elif isinstance(surface, TorusY):
+        elif isinstance(surface, YTorus):
             _, pos_node, neg_node = self._sys.torus_y_surface(
                 surface.id, surface.x0, surface.y0, surface.z0,
                 surface.major_radius, surface.minor_radius

@@ -18,11 +18,11 @@ In aleathor, a surface is always one of these types:
 |-------|----------|-----------------|
 | `Plane` | ax + by + cz = d | P, PX, PY, PZ |
 | `Sphere` | (x-x0)^2 + (y-y0)^2 + (z-z0)^2 = r^2 | S, SO, SX, SY, SZ |
-| `CylinderX` | (y-y0)^2 + (z-z0)^2 = r^2 | CX, C/X |
-| `CylinderY` | (x-x0)^2 + (z-z0)^2 = r^2 | CY, C/Y |
-| `CylinderZ` | (x-x0)^2 + (y-y0)^2 = r^2 | CZ, C/Z |
-| `ConeX/Y/Z` | ... = t^2 * (axis)^2 | KX, KY, KZ |
-| `TorusX/Y/Z` | fourth-degree surface of revolution | TX, TY, TZ |
+| `XCylinder` | (y-y0)^2 + (z-z0)^2 = r^2 | CX, C/X |
+| `YCylinder` | (x-x0)^2 + (z-z0)^2 = r^2 | CY, C/Y |
+| `ZCylinder` | (x-x0)^2 + (y-y0)^2 = r^2 | CZ, C/Z |
+| `XCone/Y/Z` | ... = t^2 * (axis)^2 | KX, KY, KZ |
+| `XTorus/Y/Z` | fourth-degree surface of revolution | TX, TY, TZ |
 | `Box` | axis-aligned box | RPP |
 | `Quadric` | Ax^2 + By^2 + ... + K = 0 | GQ, SQ |
 

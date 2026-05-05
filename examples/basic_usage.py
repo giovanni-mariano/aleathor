@@ -10,7 +10,7 @@ This example demonstrates how to:
 """
 
 import aleathor as ath
-from aleathor.surfaces import Sphere, CylinderZ, Box, Plane
+from aleathor.surfaces import Sphere, ZCylinder, Box, Plane
 
 # =============================================================================
 # 1. Create a simple reactor pin cell geometry
@@ -27,10 +27,10 @@ model = ath.Model("PWR Fuel Pin Cell")
 fuel_surf = Sphere(0, 0, 0, radius=0.4096)
 
 # Fuel-clad gap (Helium) - radius 0.418 cm
-gap_surf = CylinderZ(0, 0, radius=0.418)
+gap_surf = ZCylinder(0, 0, radius=0.418)
 
 # Cladding outer (Zircaloy) - radius 0.475 cm
-clad_surf = CylinderZ(0, 0, radius=0.475)
+clad_surf = ZCylinder(0, 0, radius=0.475)
 
 # Water box (half-pitch 0.63 cm)
 water_box = Box(-0.63, 0.63, -0.63, 0.63, -1.0, 1.0)

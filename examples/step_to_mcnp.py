@@ -49,15 +49,15 @@ import aleathor as ath
 from aleathor.surfaces import (
     Plane,
     Sphere,
-    CylinderX,
-    CylinderY,
-    CylinderZ,
-    ConeX,
-    ConeY,
-    ConeZ,
-    TorusX,
-    TorusY,
-    TorusZ,
+    XCylinder,
+    YCylinder,
+    ZCylinder,
+    XCone,
+    YCone,
+    ZCone,
+    XTorus,
+    YTorus,
+    ZTorus,
     RCC,
     Box,
 )
@@ -171,11 +171,11 @@ def _make_aleathor_surface(info, name=None):
         ox, oy, oz = info["origin"]
         r = info["radius"]
         if abs(abs(ax[2]) - 1) < AXIS_TOL:
-            return CylinderZ(ox, oy, r, name=name)
+            return ZCylinder(ox, oy, r, name=name)
         elif abs(abs(ax[1]) - 1) < AXIS_TOL:
-            return CylinderY(ox, oz, r, name=name)
+            return YCylinder(ox, oz, r, name=name)
         elif abs(abs(ax[0]) - 1) < AXIS_TOL:
-            return CylinderX(oy, oz, r, name=name)
+            return XCylinder(oy, oz, r, name=name)
         else:
             print(f"  WARNING: Off-axis cylinder (axis={ax}) not yet supported, skipping.")
             return None
@@ -186,11 +186,11 @@ def _make_aleathor_surface(info, name=None):
         ha = info["half_angle"]
         t_sq = math.tan(ha) ** 2
         if abs(abs(ax[2]) - 1) < AXIS_TOL:
-            return ConeZ(*apex, t_sq, name=name)
+            return ZCone(*apex, t_sq, name=name)
         elif abs(abs(ax[1]) - 1) < AXIS_TOL:
-            return ConeY(*apex, t_sq, name=name)
+            return YCone(*apex, t_sq, name=name)
         elif abs(abs(ax[0]) - 1) < AXIS_TOL:
-            return ConeX(*apex, t_sq, name=name)
+            return XCone(*apex, t_sq, name=name)
         else:
             print(f"  WARNING: Off-axis cone (axis={ax}) not yet supported, skipping.")
             return None
@@ -200,11 +200,11 @@ def _make_aleathor_surface(info, name=None):
         c = info["center"]
         R, r = info["major_radius"], info["minor_radius"]
         if abs(abs(ax[2]) - 1) < AXIS_TOL:
-            return TorusZ(*c, R, r, name=name)
+            return ZTorus(*c, R, r, name=name)
         elif abs(abs(ax[0]) - 1) < AXIS_TOL:
-            return TorusX(*c, R, r, name=name)
+            return XTorus(*c, R, r, name=name)
         elif abs(abs(ax[1]) - 1) < AXIS_TOL:
-            return TorusY(*c, R, r, name=name)
+            return YTorus(*c, R, r, name=name)
         else:
             print(f"  WARNING: Off-axis torus not yet supported, skipping.")
             return None

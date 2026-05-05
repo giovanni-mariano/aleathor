@@ -242,7 +242,7 @@ Define reusable geometry in one universe, then fill a container cell with that u
 pin = ath.Model("Pin")
 
 fuel = ath.Sphere(0, 0, 0, radius=0.4)
-clad = ath.CylinderZ(0, 0, radius=0.5)
+clad = ath.ZCylinder(0, 0, radius=0.5)
 box = ath.Box(-1, 1, -1, 1, -1, 1)
 
 pin.add_cell(-fuel, material=1, density=10.0, universe=1, name="fuel")

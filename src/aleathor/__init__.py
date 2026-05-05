@@ -13,7 +13,7 @@ Example:
 
     # Create geometry
     fuel = ath.Sphere(0, 0, 0, radius=5.0).interior()
-    clad = ath.CylinderZ(0, 0, radius=5.5).interior() - fuel
+    clad = ath.ZCylinder(0, 0, radius=5.5).interior() - fuel
     water = ath.Box(-10, 10, -10, 10, -10, 10).interior() - fuel - clad
 
     # Create model
@@ -45,15 +45,15 @@ from .surfaces import (
     YPlane,
     ZPlane,
     Sphere,
-    CylinderX,
-    CylinderY,
-    CylinderZ,
-    ConeX,
-    ConeY,
-    ConeZ,
-    TorusX,
-    TorusY,
-    TorusZ,
+    XCylinder,
+    YCylinder,
+    ZCylinder,
+    XCone,
+    YCone,
+    ZCone,
+    XTorus,
+    YTorus,
+    ZTorus,
     Box,
     RCC,
     TRC,
@@ -199,15 +199,15 @@ __all__ = [
     'YPlane',
     'ZPlane',
     'Sphere',
-    'CylinderX',
-    'CylinderY',
-    'CylinderZ',
-    'ConeX',
-    'ConeY',
-    'ConeZ',
-    'TorusX',
-    'TorusY',
-    'TorusZ',
+    'XCylinder',
+    'YCylinder',
+    'ZCylinder',
+    'XCone',
+    'YCone',
+    'ZCone',
+    'XTorus',
+    'YTorus',
+    'ZTorus',
     'Box',
     'RCC',
     'TRC',

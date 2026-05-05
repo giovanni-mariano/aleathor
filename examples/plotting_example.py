@@ -15,7 +15,7 @@ This example demonstrates the visualization capabilities:
 """
 
 import aleathor as ath
-from aleathor.surfaces import Sphere, CylinderZ, Box, TorusZ
+from aleathor.surfaces import Sphere, ZCylinder, Box, ZTorus
 
 # =============================================================================
 # Create a tokamak-like geometry for visualization
@@ -28,14 +28,14 @@ print("=" * 60)
 model = ath.Model("Tokamak Demo")
 
 # Plasma chamber (torus)
-plasma_torus = TorusZ(0, 0, 0, major_radius=6.0, minor_radius=2.0)
+plasma_torus = ZTorus(0, 0, 0, major_radius=6.0, minor_radius=2.0)
 
 # First wall (slightly larger torus)
-first_wall = TorusZ(0, 0, 0, major_radius=6.0, minor_radius=2.3)
+first_wall = ZTorus(0, 0, 0, major_radius=6.0, minor_radius=2.3)
 
 # Vacuum vessel (cylinder)
-vessel_inner = CylinderZ(0, 0, radius=3.5)
-vessel_outer = CylinderZ(0, 0, radius=9.0)
+vessel_inner = ZCylinder(0, 0, radius=3.5)
+vessel_outer = ZCylinder(0, 0, radius=9.0)
 
 # Outer boundary
 boundary = Box(-12, 12, -12, 12, -5, 5)
